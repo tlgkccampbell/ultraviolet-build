@@ -100,24 +100,34 @@ namespace UvTestRunner.Services
                 return id;
             }
 
-            // If the tests ran successfully, find the folder that contains the test results.
-            /* TODO: The way we do this currently introduces a race condition if the test suite is being run simultaneously
+            /* If the tests ran successfully, find the folder that contains the test results.
+             * TODO: The way we do this currently introduces a race condition if the test suite is being run simultaneously
              * in multiple threads, which shouldn't realistically happen, but this case probably
              * ought to be handled anyway for robustness. */
-            var testResultsRoot = Path.Combine(Settings.Default.TestRootDirectory, workingDirectory, "TestResults");
-            var testResultsDirs = Directory.GetDirectories(testResultsRoot)
-                .Where(x => x.Contains("_" + Environment.MachineName.ToUpper() + " "))
-                .Select(x => new DirectoryInfo(x));
+            DirectoryInfo relevantTestResult;
+            try
+            {
+                var testResultsRoot = Path.Combine(Settings.Default.TestRootDirectory, workingDirectory, "TestResults");
+                var testResultsDirs = Directory.GetDirectories(testResultsRoot)
+                    .Where(x => x.Contains("_" + Environment.MachineName.ToUpper() + " "))
+                    .Select(x => new DirectoryInfo(x));
 
-            var relevantTestResult = testResultsDirs.OrderByDescending(x => x.CreationTimeUtc).FirstOrDefault();
-            if (relevantTestResult == null)
+                relevantTestResult = testResultsDirs.OrderByDescending(x => x.CreationTimeUtc).FirstOrDefault();
+
+                if (relevantTestResult == null)
+                {
+                    UpdateTestRunStatus(id, TestRunStatus.Failed);
+                    return id;
+                }
+            }
+            catch (DirectoryNotFoundException)
             {
                 UpdateTestRunStatus(id, TestRunStatus.Failed);
                 return id;
             }
 
             // Create a directory to hold this test's artifacts.
-            var outputDirectory = Path.Combine(Settings.Default.TestResultDirectory, id.ToString());
+            var outputDirectory = Path.Combine(Settings.Default.TestResultDirectory, workingDirectory, id.ToString());
             Directory.CreateDirectory(outputDirectory);
 
             // Copy the TRX file and any outputted PNG files to the artifact directory.
