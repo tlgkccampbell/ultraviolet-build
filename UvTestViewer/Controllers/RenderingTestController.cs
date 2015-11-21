@@ -41,7 +41,7 @@ namespace UvTestViewer.Controllers
             }
 
             var service = new RenderingTestService();
-            var overview = service.GetMostRecentRenderingTestOverview(vendorValue, planKey, branchKey) ?? new RenderingTestOverview();
+            var overview = service.GetMostRecentRenderingTestOverview(vendorValue, planKey, branchKey) ?? new RenderingTestOverview() { Vendor = vendorValue };
             overview.SelectedPlanKey = planKey;
             overview.SelectedBranchKey = branchKey;
             overview.BambooPlans = await GetBambooPlans();
