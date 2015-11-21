@@ -26,5 +26,11 @@
     <Setting Name="BambooExcludedPlans" Type="System.String" Scope="Application">
       <Value Profile="(Default)">TLUV-BUILD</Value>
     </Setting>
+    <Setting Name="ColorBright" Type="System.ConsoleColor" Scope="Application">
+      <Value Profile="(Default)">Green</Value>
+    </Setting>
+    <Setting Name="ColorDark" Type="System.ConsoleColor" Scope="Application">
+      <Value Profile="(Default)">DarkGreen</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

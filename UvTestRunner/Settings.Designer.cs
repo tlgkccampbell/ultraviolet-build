@@ -95,5 +95,23 @@ namespace UvTestRunner {
                 return ((string)(this["BambooExcludedPlans"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Green")]
+        public global::System.ConsoleColor ColorBright {
+            get {
+                return ((global::System.ConsoleColor)(this["ColorBright"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("DarkGreen")]
+        public global::System.ConsoleColor ColorDark {
+            get {
+                return ((global::System.ConsoleColor)(this["ColorDark"]));
+            }
+        }
     }
 }

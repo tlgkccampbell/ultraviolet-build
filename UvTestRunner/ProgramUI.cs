@@ -106,8 +106,7 @@ namespace UvTestRunner
 
                 Console.SetCursorPosition(0, 2);
                 Console.ResetColor();
-                var s = String.Join(String.Empty, msgLines, msgLines.Length - msgLinesToShow, msgLinesToShow);
-                Console.Write(s);
+                Console.Write(String.Join(String.Empty, msgLines, msgLines.Length - msgLinesToShow, msgLinesToShow));
             }
         }
 
@@ -220,10 +219,10 @@ namespace UvTestRunner
             lock (SyncObject)
             {
                 MoveToLine(0);
-                WriteBanner(ConsoleColor.Red, ConsoleColor.White, "UvTestRunner");
+                WriteBanner(Settings.Default.ColorBright, ConsoleColor.White, "UvTestRunner");
 
                 MoveToLine(1);
-                WriteBanner(ConsoleColor.DarkRed, ConsoleColor.White, String.Empty);
+                WriteBanner(Settings.Default.ColorDark, ConsoleColor.White, String.Empty);
                 WriteRightJustified(TestRunQueueService.Instance.QueueLength + " test runs queued ");
 
                 if (flushHeader)
@@ -239,7 +238,7 @@ namespace UvTestRunner
             lock (SyncObject)
             {
                 MoveToLine(ConsoleHeight - 1);
-                WriteBanner(ConsoleColor.Red, ConsoleColor.White, String.Empty);
+                WriteBanner(Settings.Default.ColorBright, ConsoleColor.White, String.Empty);
             }
         }
 
