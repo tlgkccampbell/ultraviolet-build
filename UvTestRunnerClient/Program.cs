@@ -83,7 +83,7 @@ namespace UvTestRunnerClient
                 }
 
                 // Spit out the result file.
-                var resultData = await RetrieveTestResult(vendor, buildWorkingDirectory, idValue);
+                var resultData = await RetrieveTestResult(vendor, agentWorkingDirectory, buildWorkingDirectory, idValue);
                 var resultPath = Path.Combine(buildWorkingDirectory, outputName);
                 File.WriteAllBytes(resultPath, resultData);
 
@@ -163,9 +163,11 @@ namespace UvTestRunnerClient
         /// Retrieves the test result file associated with the specified test run.
         /// </summary>
         /// <param name="vendor">The vendor for which to retrieve test results.</param>
+        /// <param name="agentWorkingDirectory">The working directory for the current build agent.</param>
+        /// <param name="buildWorkingDirectory">The working directory for the current build.</param>
         /// <param name="id">The identifier of the test run within the server's database.</param>
         /// <returns>The contents of the test result file associated with the specified test run.</returns>
-        private static async Task<Byte[]> RetrieveTestResult(String vendor, String buildWorkingDirectory, Int64 id)
+        private static async Task<Byte[]> RetrieveTestResult(String vendor, String agentWorkingDirectory, String buildWorkingDirectory, Int64 id)
         {
             Console.WriteLine("Retreiving test result for {0}...", vendor);
 
@@ -174,13 +176,11 @@ namespace UvTestRunnerClient
                 client.Timeout = TimeSpan.FromMinutes(15);
                 client.BaseAddress = new Uri(Settings.Default.UvTestViewerUrl);
 
-                if (buildWorkingDirectory.EndsWith(Path.DirectorySeparatorChar.ToString()) ||
-                    buildWorkingDirectory.EndsWith(Path.AltDirectorySeparatorChar.ToString()))
-                {
-                    buildWorkingDirectory = buildWorkingDirectory.Substring(0, buildWorkingDirectory.Length - 1);
-                }
+                var dirRelative =
+                    new Uri(AddTrailingSlashToPath(agentWorkingDirectory)).MakeRelativeUri(
+                    new Uri(AddTrailingSlashToPath(buildWorkingDirectory)));
 
-                var request = Path.Combine("TestResults", vendor, buildWorkingDirectory, id.ToString(), "Result.trx");
+                var request = Path.Combine("TestResults", vendor, dirRelative.ToString(), id.ToString(), "Result.trx").Replace('\\', '/');
                 var response = await client.GetAsync(request);
 
                 if (!response.IsSuccessStatusCode)
