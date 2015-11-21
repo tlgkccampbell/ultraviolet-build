@@ -83,7 +83,7 @@ namespace UvTestRunnerClient
                 }
 
                 // Spit out the result file.
-                var resultData = await RetrieveTestResult(vendor, idValue);
+                var resultData = await RetrieveTestResult(vendor, buildWorkingDirectory, idValue);
                 var resultPath = Path.Combine(buildWorkingDirectory, outputName);
                 File.WriteAllBytes(resultPath, resultData);
 
@@ -165,7 +165,7 @@ namespace UvTestRunnerClient
         /// <param name="vendor">The vendor for which to retrieve test results.</param>
         /// <param name="id">The identifier of the test run within the server's database.</param>
         /// <returns>The contents of the test result file associated with the specified test run.</returns>
-        private static async Task<Byte[]> RetrieveTestResult(String vendor, Int64 id)
+        private static async Task<Byte[]> RetrieveTestResult(String vendor, String buildWorkingDirectory, Int64 id)
         {
             Console.WriteLine("Retreiving test result for {0}...", vendor);
 
@@ -174,7 +174,7 @@ namespace UvTestRunnerClient
                 client.Timeout = TimeSpan.FromMinutes(15);
                 client.BaseAddress = new Uri(Settings.Default.UvTestViewerUrl);
 
-                var request  = Path.Combine("TestResults/" + vendor + "/" + id + "/Result.trx");
+                var request = Path.Combine("TestResults", vendor, buildWorkingDirectory, id.ToString(), "Result.trx");
                 var response = await client.GetAsync(request);
 
                 if (!response.IsSuccessStatusCode)
