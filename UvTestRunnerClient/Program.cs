@@ -20,16 +20,18 @@ namespace UvTestRunnerClient
             var agentWorkingDirectory = args[0];
             var buildWorkingDirectory = args[1];
 
-            var succeeded = Task.Run(() =>
+            var succeeded = Task.Run(async () =>
             {
-                var task1 = Run("Intel", Settings.Default.UvTestRunnerUrlIntel,
-                    agentWorkingDirectory, buildWorkingDirectory, Settings.Default.OutputNameIntel);
-                var task2 = Run("Nvidia", Settings.Default.UvTestRunnerUrlNvidia,
-                    agentWorkingDirectory, buildWorkingDirectory, Settings.Default.OutputNameNvidia);
-                var task3 = Run("Amd", Settings.Default.UvTestRunnerUrlAmd,
-                    agentWorkingDirectory, buildWorkingDirectory, Settings.Default.OutputNameAmd);
+                var idIntel = await SpawnNewTestRun(Settings.Default.UvTestRunnerUrlIntel, agentWorkingDirectory, buildWorkingDirectory);
+                var idNvidia = await SpawnNewTestRun(Settings.Default.UvTestRunnerUrlNvidia, agentWorkingDirectory, buildWorkingDirectory);
+                var idAmd = await SpawnNewTestRun(Settings.Default.UvTestRunnerUrlAmd, agentWorkingDirectory, buildWorkingDirectory);
 
-                Task.WaitAll(task1, task2, task3);
+                await WaitForTestRunToComplete(idIntel, "Intel", Settings.Default.UvTestRunnerUrlIntel,
+                    agentWorkingDirectory, buildWorkingDirectory, Settings.Default.OutputNameIntel);
+                await WaitForTestRunToComplete(idNvidia, "Nvidia", Settings.Default.UvTestRunnerUrlNvidia,
+                    agentWorkingDirectory, buildWorkingDirectory, Settings.Default.OutputNameNvidia);
+                await WaitForTestRunToComplete(idAmd, "Amd", Settings.Default.UvTestRunnerUrlAmd,
+                    agentWorkingDirectory, buildWorkingDirectory, Settings.Default.OutputNameAmd);
 
                 return true;
             });
@@ -50,34 +52,34 @@ namespace UvTestRunnerClient
         }
 
         /// <summary>
-        /// Spawns a new test run, waits for it to complete, and copies the results to the configured output directory.
+        /// Waits for the specified test run to complete, then copies the results to the configured output directory.
         /// </summary>
+        /// <param name="id">The identifier of the test run for which to retrieve a result.</param>
         /// <param name="vendor">The name of the GPU vendor for which to run rendering tests.</param>
         /// <param name="testRunnerUrl">The URL of the test runner server.</param>
         /// <param name="agentWorkingDirectory">The working directory for the current build agent.</param>
         /// <param name="buildWorkingDirectory">The working directory for the current build.</param>
         /// <param name="outputName">The name to give to the result file.</param>
         /// <returns>The path to the output result file.</returns>
-        private static async Task<String> Run(String vendor, String testRunnerUrl, String agentWorkingDirectory, String buildWorkingDirectory, String outputName)
+        private static async Task<String> WaitForTestRunToComplete(Int64? id, String vendor, String testRunnerUrl, String agentWorkingDirectory, String buildWorkingDirectory, String outputName)
         {
-            if (String.IsNullOrEmpty(testRunnerUrl))
+            if (id == null)
                 return null;
+
+            var idValue = id.Value;
 
             try
             {
-                // Kick off a test run.
-                var id = await SpawnNewTestRun(testRunnerUrl, agentWorkingDirectory, buildWorkingDirectory);
-
                 // Poll until the test run is complete.
                 var status = TestRunStatus.Pending;
                 while (status != TestRunStatus.Succeeded && status != TestRunStatus.Failed)
                 {
                     await Task.Delay(1000);
-                    status = await QueryTestRunStatus(testRunnerUrl, id);
+                    status = await QueryTestRunStatus(testRunnerUrl, idValue);
                 }
 
                 // Spit out the result file.
-                var resultData = await RetrieveTestResult(vendor, id);
+                var resultData = await RetrieveTestResult(vendor, idValue);
                 var resultPath = Path.Combine(buildWorkingDirectory, outputName);
                 File.WriteAllBytes(resultPath, resultData);
 
@@ -97,8 +99,11 @@ namespace UvTestRunnerClient
         /// <param name="agentWorkingDirectory">The working directory for the current build agent.</param>
         /// <param name="buildWorkingDirectory">The working directory for the current build.</param>
         /// <returns>The identifier of the test run within the server's database.</returns>
-        private static async Task<Int64> SpawnNewTestRun(String testRunnerUrl, String agentWorkingDirectory, String buildWorkingDirectory)
+        private static async Task<Int64?> SpawnNewTestRun(String testRunnerUrl, String agentWorkingDirectory, String buildWorkingDirectory)
         {
+            if (String.IsNullOrEmpty(testRunnerUrl))
+                return null;
+
             using (var client = new HttpClient())
             {
                 client.Timeout = TimeSpan.FromMinutes(15);
@@ -146,8 +151,6 @@ namespace UvTestRunnerClient
                 }
 
                 var responseObject = await response.Content.ReadAsAsync<TestRunStatusResponse>();
-                Console.WriteLine("Received response from {0}: {1} / {2}", testRunnerUrl, responseObject.TestRunID, responseObject.TestRunStatus);
-
                 return responseObject.TestRunStatus;
             }
         }
