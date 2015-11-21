@@ -96,6 +96,8 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Models\BambooBranch.cs" />
+    <Compile Include="Models\BambooPlan.cs" />
     <Compile Include="Models\CachedTestInfo.cs" />
     <Compile Include="Models\CachedTestInfoStatus.cs" />
     <Compile Include="Models\GpuVendor.cs" />
@@ -108,6 +110,7 @@
     <Content Include="Views\web.config" />
     <Content Include="packages.config" />
     <Content Include="Views\RenderingTest\Index.cshtml" />
+    <None Include="Properties\PublishProfiles\UvTestViewer.pubxml" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
     </None>
@@ -117,6 +120,12 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BambooClient\BambooClient.csproj">
+      <Project>{18ee4f69-d2d8-4e9c-b29b-ad6f321c1c16}</Project>
+      <Name>BambooClient</Name>
+    </ProjectReference>
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

@@ -12,65 +12,92 @@
     <div class="testrun-header">
         <h1>Ultraviolet Rendering Tests</h1>
         @if (Model.TestRunID == 0) {
-            <h2>No tests have been run on @Model.VendorDisplayName hardware.</h2>
+            <h2>No tests have been run on @Model.VendorDisplayName hardware for @(Model.SelectedBranchKey ?? Model.SelectedPlanKey).</h2>
         } else {
-            <h2>Test run #@Model.TestRunID processed at @Model.TimeProcessed</h2>            
+            <h2>Test run #@Model.TestRunID for @(Model.SelectedBranchKey ?? Model.SelectedPlanKey) processed at @Model.TimeProcessed</h2>            
         }
     </div>
     <div class="testrun-subheader">
-        <a href="@Url.Action("Index", new { vendor = "intel" })" class="vendorlink Intel @(Model.Vendor == UvTestViewer.Models.GpuVendor.Intel ? "selected" : "")">
+        <a href="@Url.Action("Index", new { vendor = "intel", planKey = Model.SelectedPlanKey, branchKey = Model.SelectedBranchKey })" class="vendorlink Intel @(Model.Vendor == UvTestViewer.Models.GpuVendor.Intel ? "selected" : "")">
             <span>Intel HD Graphics</span>
-        </a><a href="@Url.Action("Index", new { vendor = "nvidia" })" class="vendorlink Nvidia @(Model.Vendor == UvTestViewer.Models.GpuVendor.Nvidia ? "selected" : "") ">
+        </a><a href="@Url.Action("Index", new { vendor = "nvidia", planKey = Model.SelectedPlanKey, branchKey = Model.SelectedBranchKey })" class="vendorlink Nvidia @(Model.Vendor == UvTestViewer.Models.GpuVendor.Nvidia ? "selected" : "") ">
             <span>NVIDIA</span>
-        </a><a href="@Url.Action("Index", new { vendor = "amd" })" class="vendorlink Amd @(Model.Vendor == UvTestViewer.Models.GpuVendor.Amd ? "selected" : "") ">
+        </a><a href="@Url.Action("Index", new { vendor = "amd", planKey = Model.SelectedPlanKey, branchKey = Model.SelectedBranchKey })" class="vendorlink Amd @(Model.Vendor == UvTestViewer.Models.GpuVendor.Amd ? "selected" : "") ">
             <span>AMD</span>
         </a>
     </div>
-    <div>
-        @{ var failingTestCount = Model.Tests.Where(x => x.Failed).Count(); }
-        @if (Model.TestRunID == 0) {
-            <h3 class="testcount none">No tests run</h3>
-        } else if (failingTestCount > 0) {
-            <h3 class="testcount failed">@Model.Tests.Where(x => x.Failed).Count() failed</h3>
-        } else {
-            <h3 class="testcount passed">All tests passed</h3>
-        }
+    <div class="testrun-sidebar-background"></div>
+    <div class="testrun-sidebar">
+        <ul>
+            @foreach (var bambooPlan in Model.BambooPlans)
+            {
+                <li>
+                    <h1>@bambooPlan.Name</h1>
+                    <ul>
+                        @foreach (var bambooBranch in bambooPlan.Branches)
+                        {
+                            var selected = String.Equals(bambooBranch.PlanKey, Model.SelectedPlanKey) && String.Equals(bambooBranch.BranchKey, Model.SelectedBranchKey);
+                            var linkcss = selected ? "active" : "inactive";
+                            <li><a class="@linkcss" href="@Url.Action("Index", new { vendor = Model.Vendor.ToString().ToLower(), planKey = bambooBranch.PlanKey, branchKey = bambooBranch.BranchKey })">@bambooBranch.Name</a></li>
+                        }
+                    </ul>
+                </li>
+            }
+        </ul>
     </div>
-    @if (Model.TestRunID != 0) { 
-        <div class="testrun-container">
-            <div class="testrun"> 
-                @foreach (var test in Model.Tests.OrderBy(x => x.Name))
-                {
-                    <div class="test @(test.Failed ? "failed" : "passed")">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <td colspan="3">
-                                        <p class="testname">@String.Format("{0}{1}", test.Name, test.Failed ? " (FAILED)" : String.Empty)</p>
-                                        <p class="testdesc">@test.Description</p>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>Expected</td>
-                                    <td>Actual</td>
-                                    <td>Diff</td>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><img class="expected" src="@test.Expected" /></td>
-                                    <td><img class="actual" src="@test.Actual" /></td>
-                                    <td><img class="diff" src="@test.Diff" /></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                }
-            </div>
+    <div class="testrun-view">
+        <div>
+            @{ var failingTestCount = Model.Tests.Where(x => x.Failed).Count(); }
+            @if (Model.TestRunID == 0)
+            {
+                <h3 class="testcount none">No tests run</h3>
+            }
+            else if (failingTestCount > 0)
+            {
+                <h3 class="testcount failed">@Model.Tests.Where(x => x.Failed).Count() failed</h3>
+            }
+            else
+            {
+                <h3 class="testcount passed">All tests passed</h3>
+            }
         </div>
-    }
-    <div class="testrun-footer">
-        <p>UvTestRunner is part of the <a href="http://uv.twistedlogik.net">Ultraviolet Framework</a>.</p>
+        @if (Model.TestRunID != 0)
+        {
+            <div class="testrun-container">
+                <div class="testrun">
+                    @foreach (var test in Model.Tests.OrderBy(x => x.Name))
+                    {
+                        <div class="test @(test.Failed ? "failed" : "passed")">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <td colspan="3">
+                                            <p class="testname">@String.Format("{0}{1}", test.Name, test.Failed ? " (FAILED)" : String.Empty)</p>
+                                            <p class="testdesc">@test.Description</p>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Expected</td>
+                                        <td>Actual</td>
+                                        <td>Diff</td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><img class="expected" src="@test.Expected" /></td>
+                                        <td><img class="actual" src="@test.Actual" /></td>
+                                        <td><img class="diff" src="@test.Diff" /></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        <div class="testrun-footer">
+            <p>UvTestRunner is part of the <a href="http://uv.twistedlogik.net">Ultraviolet Framework</a>.</p>
+        </div>
     </div>
 </body>
 </html>

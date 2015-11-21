@@ -65,9 +65,36 @@ namespace UvTestViewer.Models
         }
 
         /// <summary>
+        /// Gets or sets the Bamboo plan key which is currently selected.
+        /// </summary>
+        public String SelectedPlanKey
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// Gets or sets the Bamboo branch key which is currently selected.
+        /// </summary>
+        public String SelectedBranchKey
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
         /// Gets or sets the set of tests to display.
         /// </summary>
         public IEnumerable<RenderingTest> Tests
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// Gets or sets the active Bamboo plans.
+        /// </summary>
+        public IEnumerable<BambooPlan> BambooPlans
         {
             get;
             set;

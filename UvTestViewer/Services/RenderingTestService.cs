@@ -19,11 +19,13 @@ namespace UvTestViewer.Services
         /// Gets an overview of the most recent rendering test run.
         /// </summary>
         /// <param name="vendor">The vendor for which to retrieve a rendering test run.</param>
+        /// <param name="planKey">The Bamboo plan key for which to retrieve results.</param>
+        /// <param name="branchKey">The Bamboo branch key for which to retrieve results.</param>
         /// <returns>A <see cref="RenderingTestOverview"/> instance which represents the msot recent test run.</returns>
-        public RenderingTestOverview GetMostRecentRenderingTestOverview(GpuVendor vendor)
+        public RenderingTestOverview GetMostRecentRenderingTestOverview(GpuVendor vendor, String planKey, String branchKey)
         {
             var id        = 0L;
-            var directory = GetMostRecentTestResultsDirectory(vendor, out id);
+            var directory = GetMostRecentTestResultsDirectory(vendor, planKey, branchKey, out id);
             if (directory == null)
                 return null;
 
@@ -38,7 +40,10 @@ namespace UvTestViewer.Services
                                group filename by testname into g
                                select g;
 
-            var outputDir = VirtualPathUtility.ToAbsolute(String.Format("~/TestResults/{0}/{1}", vendor, id));
+            var workingDirectoryPattern = ConfigurationManager.AppSettings["BambooWorkingDirectoryPattern"];
+            var workingDirectory = String.Format(workingDirectoryPattern, branchKey ?? planKey);
+
+            var outputDir = VirtualPathUtility.ToAbsolute(String.Format("~/TestResults/{0}/{1}/{2}", vendor, workingDirectory, id));
             
             var tests = new List<RenderingTest>();
             foreach (var cachedTestInfo in cachedTestInfos)
@@ -86,11 +91,13 @@ namespace UvTestViewer.Services
         /// Gets a <see cref="DirectoryInfo"/> which represents the most recent rendering test run.
         /// </summary>
         /// <param name="vendor">The vendor for which to retrieve a rendering test run.</param>
+        /// <param name="planKey">The Bamboo plan key for which to retrieve results.</param>
+        /// <param name="branchKey">The Bamboo branch key for which to retrieve results.</param>
         /// <param name="id">The identifier of the test run associated with the retrieved directory.</param>
         /// <returns>A <see cref="DirectoryInfo"/> which represents the most recent rendering test run.</returns>
-        private static DirectoryInfo GetMostRecentTestResultsDirectory(GpuVendor vendor, out Int64 id)
+        private static DirectoryInfo GetMostRecentTestResultsDirectory(GpuVendor vendor, String planKey, String branchKey, out Int64 id)
         {
-            var root       = ConfigurationManager.AppSettings["TestResultRootDirectory"];
+            var root = ConfigurationManager.AppSettings["TestResultRootDirectory"];
             var rootMapped = Path.IsPathRooted(root) ? root : HttpContext.Current.Server.MapPath(root);
 
             switch (vendor)
@@ -110,6 +117,9 @@ namespace UvTestViewer.Services
                 default: 
                     throw new ArgumentException("Unrecognized GPU hardware vendor.");
             }
+            var workingDirectoryPattern = ConfigurationManager.AppSettings["BambooWorkingDirectoryPattern"];
+            var workingDirectory = String.Format(workingDirectoryPattern, branchKey ?? planKey);
+            rootMapped = Path.Combine(rootMapped, workingDirectory);
 
             if (!Directory.Exists(rootMapped))
             {

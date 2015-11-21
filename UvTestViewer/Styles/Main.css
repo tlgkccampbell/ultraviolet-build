@@ -41,7 +41,6 @@ body {
     line-height: 2.5em;
     background-color: #8d4eb2;
     text-align: center;
-    margin-bottom: 16px;
 }
 
 .testrun-subheader .vendorlink {    
@@ -53,6 +52,66 @@ body {
 
 .testrun-subheader .vendorlink:hover {
     background-color: #7100b5;
+}
+
+.testrun-sidebar-background {
+    background-color: #cab4de;
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 300px;
+    z-index: -1;
+}
+
+.testrun-sidebar {
+    color: #000;
+    font-size: 1em;
+    padding: 0;
+    width: 300px;
+    float: left;
+}
+
+.testrun-sidebar ul {
+    list-style: none;
+    margin: 0;
+    padding-left: 0;
+}
+
+.testrun-sidebar ul h1 {
+    font-size: 1em;
+    margin: 0;
+    padding: 0;
+    padding-left: 8px;
+    background: #8f7aa4;
+    color: #fff;
+}
+
+.testrun-sidebar ul li {
+    line-height: 2em;
+}
+
+.testrun-sidebar ul li a {
+    display: block;
+    text-decoration: none;
+    padding-left: 16px;
+    color: #000;
+}
+
+.testrun-sidebar ul li a.active {
+    background: #b59bce;
+}
+
+.testrun-sidebar ul li a:hover {
+    background: #ab88ce;
+}
+
+.testrun-view {
+    float: left;
+    margin-top: 8px;
+    position: absolute;
+    left: 300px;
+    right: 0px;
 }
 
 .vendorlink span {
