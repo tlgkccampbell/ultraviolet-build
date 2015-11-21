@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
+using System.Runtime.Caching;
 using System.Threading.Tasks;
 using System.Web.Mvc;
 using BambooClient;
@@ -49,6 +50,11 @@ namespace UvTestViewer.Controllers
 
         private async Task<IEnumerable<BambooPlan>> GetBambooPlans()
         {
+            var cache = MemoryCache.Default;
+            var cachedPlans = cache.Get("BambooPlans") as IEnumerable<BambooPlan>;
+            if (cachedPlans != null)
+                return cachedPlans;
+
             var excludedPlanKeys = (ConfigurationManager.AppSettings["BambooExcludedPlanKeys"] ?? String.Empty).Split(';');
 
             var bambooBaseUri = new Uri(ConfigurationManager.AppSettings["BambooBaseUri"]);
@@ -69,6 +75,7 @@ namespace UvTestViewer.Controllers
                     result.Add(plan);
                 }
 
+                cache.Add("BambooPlans", result, DateTimeOffset.Now.AddMinutes(30));
                 return result;
             }
         }
