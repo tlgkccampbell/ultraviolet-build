@@ -35,7 +35,7 @@ namespace UvTestRunner
                         var key = Console.ReadKey(true);
                         if (key.Key == ConsoleKey.P)
                         {
-                            var paused = TestRunnerQueueService.Instance.QueueIsPaused = !TestRunnerQueueService.Instance.QueueIsPaused;
+                            var paused = TestRunQueueService.Instance.QueueIsPaused = !TestRunQueueService.Instance.QueueIsPaused;
 
                             ProgramUI.QueueMessage(paused ? "Queue processing paused by user." : "Queue processing resumed by user.");
                             ProgramUI.FlushQueuedMessages();
@@ -105,7 +105,7 @@ namespace UvTestRunner
                         break;
                 }
 
-                TestRunnerQueueService.Instance.Consume();
+                TestRunQueueService.Instance.Consume();
                 Thread.Sleep(100);
             }
         }

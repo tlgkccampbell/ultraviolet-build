@@ -10,18 +10,20 @@ namespace UvTestRunner.Controllers
         [Route("api/uvtest")]
         public IHttpActionResult Post([FromBody] String workingDirectory)
         {
-            var testRunID = TestRunnerQueueService.Instance.Create(workingDirectory);
+            var testRunID = TestRunQueueService.Instance.Create(workingDirectory);
             return Ok(new TestRunCreationResponse() { TestRunID = testRunID });
         }
 
         [Route("api/uvtest/{id}")]
         public IHttpActionResult Get(Int64 id)
         {
-            var run = TestRunnerQueueService.Instance.RunnerService.GetByID(id);
+            var run = testRunService.GetByID(id);
             if (run == null)
                 return NotFound();
 
             return Ok(new TestRunStatusResponse() { TestRunID = id, TestRunStatus = run.Status });
         }
+
+        private readonly TestRunService testRunService = new TestRunService();
     }
 }

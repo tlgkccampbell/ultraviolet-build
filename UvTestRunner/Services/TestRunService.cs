@@ -11,22 +11,8 @@ namespace UvTestRunner.Services
     /// Represents a service which can run the test suite and retrieve data about
     /// previous test suite runs.
     /// </summary>
-    public class TestRunnerService
+    public class TestRunService
     {
-        /// <summary>
-        /// Initializes the <see cref="TestRunnerService"/> type.
-        /// </summary>
-        static TestRunnerService()
-        {
-            using (var testRunContext = new TestRunContext())
-            {
-                var mostRecentTestRun = testRunContext.TestRuns
-                    .Where(x => x.Status == TestRunStatus.Failed || x.Status == TestRunStatus.Succeeded)
-                    .OrderByDescending(x => x.ID).FirstOrDefault();
-                MostRecentTestRunStatus = (mostRecentTestRun == null)  ? TestRunStatus.Pending : mostRecentTestRun.Status;
-            }
-        }
-
         /// <summary>
         /// Gets the test run with the specified identifier.
         /// </summary>
@@ -37,6 +23,22 @@ namespace UvTestRunner.Services
             using (var testRunContext = new TestRunContext())
             {
                 return testRunContext.TestRuns.Where(x => x.ID == id).SingleOrDefault();
+            }
+        }
+
+        /// <summary>
+        /// Gets the status of the most recent test run in the specified working directory.
+        /// </summary>
+        /// <param name="workingDirectory">The working directory of the test runs to evaluate.</param>
+        /// <returns>A <see cref="TestRunStatus"/> value that specifies the status of the most recent test run in the specified working directory.</returns>
+        public TestRunStatus GetMostRecentStatusByWorkingDirectory(String workingDirectory)
+        {
+            if (String.IsNullOrEmpty(workingDirectory))
+                return TestRunStatus.Failed;
+
+            using (var testRunContext = new TestRunContext())
+            {
+                return testRunContext.TestRuns.Where(x => x.WorkingDirectory == workingDirectory).OrderByDescending(x => x.ID).Take(1).Select(x => x.Status).SingleOrDefault();
             }
         }
 
@@ -65,7 +67,6 @@ namespace UvTestRunner.Services
             // If MSTest exited with an error, log it to the database and bail out.
             if (proc.ExitCode != 0 && proc.ExitCode != 1)
             {
-                MostRecentTestRunStatus = TestRunStatus.Failed;
                 UpdateTestRunStatus(id, TestRunStatus.Failed);
                 return id;
             }
@@ -82,7 +83,6 @@ namespace UvTestRunner.Services
             var relevantTestResult = testResultsDirs.OrderByDescending(x => x.CreationTimeUtc).FirstOrDefault();
             if (relevantTestResult == null)
             {
-                MostRecentTestRunStatus = TestRunStatus.Failed;
                 UpdateTestRunStatus(id, TestRunStatus.Failed);
                 return id;
             }
@@ -103,7 +103,6 @@ namespace UvTestRunner.Services
                 var pngFileDst = Path.Combine(outputDirectory, Path.GetFileName(pngFileSrc));
                 CopyFile(pngFileSrc, pngFileDst);
             }
-            MostRecentTestRunStatus = TestRunStatus.Succeeded;
             UpdateTestRunStatus(id, TestRunStatus.Succeeded);
 
             return id;
@@ -158,15 +157,6 @@ namespace UvTestRunner.Services
 
                 return previousStatus;
             }
-        }
-
-        /// <summary>
-        /// Gets the status of the most recent test run.
-        /// </summary>
-        public static TestRunStatus MostRecentTestRunStatus
-        {
-            get;
-            private set;
         }
 
         /// <summary>

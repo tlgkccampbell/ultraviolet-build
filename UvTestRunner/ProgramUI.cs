@@ -224,7 +224,7 @@ namespace UvTestRunner
 
                 MoveToLine(1);
                 WriteBanner(ConsoleColor.DarkRed, ConsoleColor.White, String.Empty);
-                WriteRightJustified(TestRunnerQueueService.Instance.QueueLength + " test runs queued ");
+                WriteRightJustified(TestRunQueueService.Instance.QueueLength + " test runs queued ");
 
                 if (flushHeader)
                     FlushBuffer(0, 1);

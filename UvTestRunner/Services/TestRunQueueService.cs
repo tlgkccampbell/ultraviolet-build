@@ -6,12 +6,12 @@ namespace UvTestRunner.Services
     /// <summary>
     /// Represents a service which manages a queue of test run instances.
     /// </summary>
-    public class TestRunnerQueueService
+    public class TestRunQueueService
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="TestRunnerQueueService"/> class.
+        /// Initializes a new instance of the <see cref="TestRunQueueService"/> class.
         /// </summary>
-        private TestRunnerQueueService() { }
+        private TestRunQueueService() { }
 
         /// <summary>
         /// Creates a new pending test run.
@@ -68,21 +68,13 @@ namespace UvTestRunner.Services
         }
 
         /// <summary>
-        /// Gets the singleton instance of the <see cref="TestRunnerQueueService"/> class.
+        /// Gets the singleton instance of the <see cref="TestRunQueueService"/> class.
         /// </summary>
-        public static TestRunnerQueueService Instance
+        public static TestRunQueueService Instance
         {
             get { return instance; }
         }
-
-        /// <summary>
-        /// Gets the service's instance of <see cref="TestRunnerService"/>.
-        /// </summary>
-        public TestRunnerService RunnerService
-        {
-            get { return testRunnerService; }
-        }
-
+        
         /// <summary>
         /// Gets or sets a value indicating whether the queue is paused.
         /// </summary>
@@ -109,13 +101,13 @@ namespace UvTestRunner.Services
         }
 
         // The class' singleton instance.
-        private static readonly TestRunnerQueueService instance = new TestRunnerQueueService();
+        private static readonly TestRunQueueService instance = new TestRunQueueService();
 
         // State values.
         private readonly Queue<Int64> queue = new Queue<Int64>();
         private Boolean queueIsPaused;
 
         // The service responsible for running tests.
-        private readonly TestRunnerService testRunnerService = new TestRunnerService();
+        private readonly TestRunService testRunnerService = new TestRunService();
     }
 }
