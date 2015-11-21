@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -39,6 +40,34 @@ namespace UvTestRunner.Services
             using (var testRunContext = new TestRunContext())
             {
                 return testRunContext.TestRuns.Where(x => x.WorkingDirectory == workingDirectory).OrderByDescending(x => x.ID).Take(1).Select(x => x.Status).SingleOrDefault();
+            }
+        }
+
+        /// <summary>
+        /// Gets a value which represents the overall status of the most recent test runs in all of the specified working directories.
+        /// </summary>
+        /// <param name="workingDirectories">A collection of working directories representing the test runs to evaluate.</param>
+        /// <returns>A <see cref="TestRunStatus"/> value that specifies the overall status of the most recent test runs in the specified working directories.</returns>
+        public TestRunStatus GetMostRecentStatusByWorkingDirectories(IEnumerable<String> workingDirectories)
+        {
+            if (workingDirectories == null)
+                return TestRunStatus.Failed;
+
+            using (var testRunContext = new TestRunContext())
+            {
+                var statuses = testRunContext.TestRuns.GroupBy(x => x.WorkingDirectory).Where(x => workingDirectories.Contains(x.Key))
+                    .Select(x => x.OrderByDescending(y => y.ID).Select(y => y.Status).FirstOrDefault()).ToList();
+
+                if (statuses.Any(x => x == TestRunStatus.Failed))
+                    return TestRunStatus.Failed;
+
+                if (statuses.Any(x => x == TestRunStatus.Running))
+                    return TestRunStatus.Running;
+
+                if (statuses.Any(x => x == TestRunStatus.Pending))
+                    return TestRunStatus.Pending;
+
+                return TestRunStatus.Succeeded;
             }
         }
 

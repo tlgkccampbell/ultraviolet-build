@@ -17,5 +17,14 @@
     <Setting Name="TestResultDirectory" Type="System.String" Scope="Application">
       <Value Profile="(Default)">C:\Ultraviolet\TestResults</Value>
     </Setting>
+    <Setting Name="BambooServerUri" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">http://dev.twistedlogik.net:8085</Value>
+    </Setting>
+    <Setting Name="BambooWorkingDirectoryPattern" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">{0}-TU/</Value>
+    </Setting>
+    <Setting Name="BambooExcludedPlans" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">TLUV-BUILD</Value>
+    </Setting>
   </Settings>
 </SettingsFile>
