@@ -8,5 +8,6 @@ namespace UvTestRunner.Models
         [Column("TestRunID")]
         public Int64 ID { get; set; }
         public TestRunStatus Status { get; set; }
+        public String WorkingDirectory { get; set; }
     }
 }

@@ -83,8 +83,10 @@
     <Compile Include="Models\TestRunStatus.cs" />
     <Compile Include="Models\TestRunStatusResponse.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="ProgramUI.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Data\TestRunContext.cs" />
+    <Compile Include="Services\TestRunnerQueueService.cs" />
     <Compile Include="Services\TestRunnerService.cs" />
     <Compile Include="Settings.Designer.cs">
       <AutoGen>True</AutoGen>

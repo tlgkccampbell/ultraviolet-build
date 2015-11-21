@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using UvTestRunner.Data;
 using UvTestRunner.Models;
 
@@ -42,21 +41,23 @@ namespace UvTestRunner.Services
         }
 
         /// <summary>
-        /// Runs the test suite.
+        /// Executes the specified test run.
         /// </summary>
-        /// <param name="workingDirectory">The current working directory for the build agent.</param>
+        /// <param name="testRun">The test run to execute.</param>
         /// <returns>The identifier of the test run within the database.</returns>
-        public async Task<Int64> Run(String workingDirectory)
+        public Int64 Run(TestRun testRun)
         {
-            var id = CreateTestRun();
+            if (testRun == null)
+                throw new ArgumentNullException("testRun");
 
-            Console.WriteLine("Starting test run #{0}", id);
+            var id = testRun.ID;
+            var workingDirectory = testRun.WorkingDirectory;
 
             // Start by spawning the MSTest process and running the unit test suite.
             UpdateTestRunStatus(id, TestRunStatus.Running);
             var psi = new ProcessStartInfo(Settings.Default.TestHostExecutable, Settings.Default.TestHostArgs)
             {
-                WorkingDirectory = Path.Combine(Settings.Default.TestRootDirectory, workingDirectory)
+                WorkingDirectory = Path.Combine(Settings.Default.TestRootDirectory, workingDirectory).Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
             };
             var proc = Process.Start(psi);
             proc.WaitForExit();
@@ -93,14 +94,14 @@ namespace UvTestRunner.Services
             // Copy the TRX file and any outputted PNG files to the artifact directory.
             var trxFileSrc = Path.ChangeExtension(Path.Combine(relevantTestResult.Parent.FullName, relevantTestResult.Name), "trx");
             var trxFileDst = Path.Combine(outputDirectory, "Result.trx");
-            await CopyFileAsync(trxFileSrc, trxFileDst);
+            CopyFile(trxFileSrc, trxFileDst);
 
             var pngFiles = Directory.GetFiles(Path.Combine(relevantTestResult.FullName, "Out"), "*.png");
             foreach (var pngFile in pngFiles)
             {
                 var pngFileSrc = pngFile;
                 var pngFileDst = Path.Combine(outputDirectory, Path.GetFileName(pngFileSrc));
-                await CopyFileAsync(pngFileSrc, pngFileDst);
+                CopyFile(pngFileSrc, pngFileDst);
             }
             MostRecentTestRunStatus = TestRunStatus.Succeeded;
             UpdateTestRunStatus(id, TestRunStatus.Succeeded);
@@ -111,12 +112,13 @@ namespace UvTestRunner.Services
         /// <summary>
         /// Creates a new test run and places it into pending status.
         /// </summary>
+        /// <param name="workingDirectory">The current working directory for the build agent.</param>
         /// <returns>The identifier of the test run within the database.</returns>
-        public Int64 CreateTestRun()
+        public Int64 CreateTestRun(String workingDirectory)
         {
             using (var testRunContext = new TestRunContext())
             {
-                var run = new TestRun() { Status = TestRunStatus.Pending };
+                var run = new TestRun() { Status = TestRunStatus.Pending, WorkingDirectory = workingDirectory };
 
                 testRunContext.TestRuns.Add(run);
                 testRunContext.SaveChanges();
@@ -173,14 +175,13 @@ namespace UvTestRunner.Services
         /// <param name="src">The source file.</param>
         /// <param name="dst">The destination file.</param>
         /// <returns>A <see cref="Task"/> which represents the copy operation.</returns>
-        private async Task CopyFileAsync(String src, String dst)
+        private void CopyFile(String src, String dst)
         {
             using (var srcStream = File.Open(src, FileMode.Open))
             {
                 using (var dstStream = File.Create(dst))
                 {
-                    await srcStream.CopyToAsync(dstStream);
-                    return;
+                    srcStream.CopyTo(dstStream);
                 }
             }
         }

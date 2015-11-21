@@ -2,34 +2,49 @@
 using System.Diagnostics;
 using System.Threading;
 using Microsoft.Owin.Hosting;
+using UvTestRunner.Services;
 
 namespace UvTestRunner
 {
     public class Program
     {
-        private static Boolean running;
-
         private static void Main(String[] args)
         {
             CreateEventLog();
-
             LogInfo("UvTestRunner was started.");
 
-            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
-
+            Console.Title = String.Format("UvTestRunner [{0}]", Settings.Default.WebApiUrl);
             Console.CancelKeyPress += Console_CancelKeyPress;
-            Console.WriteLine("Starting UvTestRunner...");
+
+            ProgramUI.Clear();
+            ProgramUI.QueueMessage("UvTestRunner was started.");
+            ProgramUI.FlushQueuedMessages();
 
             running = true;
 
+            ThreadPool.QueueUserWorkItem(ConsumeEnqueuedTestRuns);
+
             using (WebApp.Start<Startup>(url: Settings.Default.WebApiUrl))
             {
-                while (running) { Thread.Sleep(1000); }
+                while (running)
+                {
+                    Thread.Sleep(100);
+
+                    if (Console.KeyAvailable)
+                    {
+                        var key = Console.ReadKey(true);
+                        if (key.Key == ConsoleKey.P)
+                        {
+                            var paused = TestRunnerQueueService.Instance.QueueIsPaused = !TestRunnerQueueService.Instance.QueueIsPaused;
+
+                            ProgramUI.QueueMessage(paused ? "Queue processing paused by user." : "Queue processing resumed by user.");
+                            ProgramUI.FlushQueuedMessages();
+                        }
+                    }
+                }
             }
 
             LogInfo("UvTestRunner was closed.");
-
-            Console.WriteLine("Goodbye.");
         }
 
         private static void CreateEventLog()
@@ -71,26 +86,31 @@ namespace UvTestRunner
             }
         }
         
-        private static void CurrentDomain_UnhandledException(Object sender, UnhandledExceptionEventArgs e)
-        {
-            LogError(e.ExceptionObject.ToString());
-
-            var color = Console.ForegroundColor;
-
-            Console.ForegroundColor = ConsoleColor.Red;
-
-            Console.WriteLine("UNHANDLED EXCEPTION");
-            Console.WriteLine("===================");
-            Console.WriteLine(e.ExceptionObject);
-            Console.WriteLine("===================");
-
-            Console.ForegroundColor = color;
-        }
-
         private static void Console_CancelKeyPress(Object sender, ConsoleCancelEventArgs e)
         {
-            running = false;
+            lock (SyncObject)
+            {
+                running = false;
+            }
             e.Cancel = true;
         }
+
+        private static void ConsumeEnqueuedTestRuns(Object state)
+        {
+            while (true)
+            {
+                lock (SyncObject)
+                {
+                    if (!running)
+                        break;
+                }
+
+                TestRunnerQueueService.Instance.Consume();
+                Thread.Sleep(100);
+            }
+        }
+
+        private static readonly Object SyncObject = new Object();
+        private static Boolean running;
     }
 }
