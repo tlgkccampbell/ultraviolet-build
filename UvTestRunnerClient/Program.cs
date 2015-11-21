@@ -174,6 +174,12 @@ namespace UvTestRunnerClient
                 client.Timeout = TimeSpan.FromMinutes(15);
                 client.BaseAddress = new Uri(Settings.Default.UvTestViewerUrl);
 
+                if (buildWorkingDirectory.EndsWith(Path.DirectorySeparatorChar.ToString()) ||
+                    buildWorkingDirectory.EndsWith(Path.AltDirectorySeparatorChar.ToString()))
+                {
+                    buildWorkingDirectory = buildWorkingDirectory.Substring(0, buildWorkingDirectory.Length - 1);
+                }
+
                 var request = Path.Combine("TestResults", vendor, buildWorkingDirectory, id.ToString(), "Result.trx");
                 var response = await client.GetAsync(request);
 
