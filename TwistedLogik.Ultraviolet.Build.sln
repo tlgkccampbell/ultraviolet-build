@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UvTestViewer", "UvTestViewe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UvBuildStatus", "UvBuildStatus\UvBuildStatus.csproj", "{EEB1B485-08C2-4DBE-AB4C-49FA45843BFE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BambooClient", "BambooClient\BambooClient.csproj", "{18EE4F69-D2D8-4E9C-B29B-AD6F321C1C16}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{EEB1B485-08C2-4DBE-AB4C-49FA45843BFE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EEB1B485-08C2-4DBE-AB4C-49FA45843BFE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EEB1B485-08C2-4DBE-AB4C-49FA45843BFE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{18EE4F69-D2D8-4E9C-B29B-AD6F321C1C16}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{18EE4F69-D2D8-4E9C-B29B-AD6F321C1C16}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{18EE4F69-D2D8-4E9C-B29B-AD6F321C1C16}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{18EE4F69-D2D8-4E9C-B29B-AD6F321C1C16}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
