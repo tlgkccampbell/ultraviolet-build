@@ -18,11 +18,10 @@ body {
 }
 
 .testrun-header {
-    width: 100%;
     color: #fff;
     background-color: #7100b5;
-    padding: 8px;
     text-align: center;
+    padding: 8px;
 }
 
 .testrun-header h1 {
