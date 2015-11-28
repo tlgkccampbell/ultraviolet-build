@@ -64,7 +64,7 @@ namespace UvTestViewer.Services
                 tests.Add(test);
             }
 
-            var resultTests = tests.Select((test, index) => new { Page = index / pageSize, Test = test }).GroupBy(item => item.Page)
+            var resultTests = tests.OrderBy(test => test.Name).Select((test, index) => new { Page = index / pageSize, Test = test }).GroupBy(item => item.Page)
                 .Select(group => group.Select(item => item.Test)).ToList();
             var resultPages = resultTests.Select(x => new RenderingTestPage() { Failed = x.Any(y => y.Failed) });
 
