@@ -19,13 +19,13 @@
         }
     </div>
     <div class="testrun-subheader">
-        <a href="@Url.Action("Index", new { vendor = GpuVendor.Intel, planKey = Model.SelectedPlanKey, branchKey = Model.SelectedBranchKey })" 
+        <a href="@Url.Action("Index", new { vendor = GpuVendor.Intel, planKey = Model.SelectedPlanKey, branchKey = Model.SelectedBranchKey, page = Model.SelectedPage })" 
            class="vendorlink Intel @(Model.Vendor == GpuVendor.Intel ? "selected" : "")">
             <span>Intel HD Graphics</span>
-        </a><a href="@Url.Action("Index", new { vendor = GpuVendor.Nvidia, planKey = Model.SelectedPlanKey, branchKey = Model.SelectedBranchKey })" 
+        </a><a href="@Url.Action("Index", new { vendor = GpuVendor.Nvidia, planKey = Model.SelectedPlanKey, branchKey = Model.SelectedBranchKey, page = Model.SelectedPage })" 
                class="vendorlink Nvidia @(Model.Vendor == GpuVendor.Nvidia ? "selected" : "") ">
             <span>NVIDIA</span>
-        </a><a href="@Url.Action("Index", new { vendor = GpuVendor.Amd, planKey = Model.SelectedPlanKey, branchKey = Model.SelectedBranchKey })" 
+        </a><a href="@Url.Action("Index", new { vendor = GpuVendor.Amd, planKey = Model.SelectedPlanKey, branchKey = Model.SelectedBranchKey, page = Model.SelectedPage })" 
                class="vendorlink Amd @(Model.Vendor == GpuVendor.Amd ? "selected" : "") ">
             <span>AMD</span>
         </a>
