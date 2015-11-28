@@ -14,13 +14,42 @@ namespace UvTestViewer.Models
         /// </summary>
         public RenderingTestOverview()
         {
-            Tests = Enumerable.Empty<RenderingTest>();
+            Tests = new List<RenderingTest>();
+            Pages = new List<RenderingTestPage>();
+            BambooPlans = new List<BambooPlan>();
         }
 
         /// <summary>
         /// Gets or sets the identifier of the test run.
         /// </summary>
         public Int64 TestRunID
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// Gets or sets the total number of passing tests across all pages.
+        /// </summary>
+        public Int32 PassedTestCount
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// Gets or sets the total number of failing tests across all pages.
+        /// </summary>
+        public Int32 FailedTestCount
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// Gets or sets the index of the current page.
+        /// </summary>
+        public Int32 SelectedPage
         {
             get;
             set;
@@ -62,7 +91,7 @@ namespace UvTestViewer.Models
                 }
                 return "unknown";
             }
-        }
+        }        
 
         /// <summary>
         /// Gets or sets the Bamboo plan key which is currently selected.
@@ -85,7 +114,16 @@ namespace UvTestViewer.Models
         /// <summary>
         /// Gets or sets the set of tests to display.
         /// </summary>
-        public IEnumerable<RenderingTest> Tests
+        public IList<RenderingTest> Tests
+        {
+            get;
+            set;
+        }
+        
+        /// <summary>
+        /// Gets or sets the collection of metadata for the pages of test results.
+        /// </summary>
+        public IList<RenderingTestPage> Pages
         {
             get;
             set;
@@ -94,7 +132,7 @@ namespace UvTestViewer.Models
         /// <summary>
         /// Gets or sets the active Bamboo plans.
         /// </summary>
-        public IEnumerable<BambooPlan> BambooPlans
+        public IList<BambooPlan> BambooPlans
         {
             get;
             set;

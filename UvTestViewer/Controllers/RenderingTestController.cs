@@ -14,14 +14,20 @@ namespace UvTestViewer.Controllers
     public class RenderingTestController : Controller
     {
         // GET: RenderingTest
-        public async Task<ActionResult> Index(String vendor = null, String planKey = null, String branchKey = null)
+        public async Task<ActionResult> Index(String vendor = null, String planKey = null, String branchKey = null, Int32 page = 0, Int32 pageSize = 10)
         {
+            if (page < 0)
+                throw new ArgumentOutOfRangeException("page");
+
+            if (pageSize < 1)
+                throw new ArgumentOutOfRangeException("pageSize");
+
             planKey = planKey ?? ConfigurationManager.AppSettings["DefaultPlanKey"];
 
             var vendorValue = GpuVendor.Nvidia;
             if (vendor != null)
             {
-                switch (vendor)
+                switch (vendor.ToLowerInvariant())
                 {
                     case "intel":
                         vendorValue = GpuVendor.Intel;
@@ -41,17 +47,17 @@ namespace UvTestViewer.Controllers
             }
 
             var service = new RenderingTestService();
-            var overview = service.GetMostRecentRenderingTestOverview(vendorValue, planKey, branchKey) ?? new RenderingTestOverview() { Vendor = vendorValue };
+            var overview = service.GetMostRecentRenderingTestOverview(vendorValue, planKey, branchKey, page, pageSize) ?? new RenderingTestOverview() { Vendor = vendorValue };
             overview.SelectedPlanKey = planKey;
             overview.SelectedBranchKey = branchKey;
             overview.BambooPlans = await GetBambooPlans();
             return View(overview);
         }
 
-        private async Task<IEnumerable<BambooPlan>> GetBambooPlans()
+        private async Task<IList<BambooPlan>> GetBambooPlans()
         {
             var cache = MemoryCache.Default;
-            var cachedPlans = cache.Get("BambooPlans") as IEnumerable<BambooPlan>;
+            var cachedPlans = cache.Get("BambooPlans") as IList<BambooPlan>;
             if (cachedPlans != null)
                 return cachedPlans;
 

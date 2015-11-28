@@ -21,8 +21,10 @@ namespace UvTestViewer.Services
         /// <param name="vendor">The vendor for which to retrieve a rendering test run.</param>
         /// <param name="planKey">The Bamboo plan key for which to retrieve results.</param>
         /// <param name="branchKey">The Bamboo branch key for which to retrieve results.</param>
+        /// <param name="page">The index of the selected page of results.</param>
+        /// <param name="pageSize">The number of test results on each page of the overview.</param>
         /// <returns>A <see cref="RenderingTestOverview"/> instance which represents the msot recent test run.</returns>
-        public RenderingTestOverview GetMostRecentRenderingTestOverview(GpuVendor vendor, String planKey, String branchKey)
+        public RenderingTestOverview GetMostRecentRenderingTestOverview(GpuVendor vendor, String planKey, String branchKey, Int32 page, Int32 pageSize)
         {
             var id        = 0L;
             var directory = GetMostRecentTestResultsDirectory(vendor, planKey, branchKey, out id);
@@ -62,10 +64,21 @@ namespace UvTestViewer.Services
                 tests.Add(test);
             }
 
+            var resultTests = tests.Select((test, index) => new { Page = index / pageSize, Test = test }).GroupBy(item => item.Page)
+                .Select(group => group.Select(item => item.Test)).ToList();
+            var resultPages = resultTests.Select(x => new RenderingTestPage() { Failed = x.Any(y => y.Failed) });
+
+            if (page < 0 || page >= resultTests.Count)
+                page = 0;
+            
             return new RenderingTestOverview()
             {
                 TestRunID = id,
-                Tests = tests,
+                PassedTestCount = tests.Where(x => !x.Failed).Count(),
+                FailedTestCount = tests.Where(x => x.Failed).Count(),
+                SelectedPage = page,
+                Tests = resultTests[page].ToList(),
+                Pages = resultPages.ToList(),
                 TimeProcessed = directory.CreationTime,
                 Vendor = vendor
             };

@@ -113,6 +113,48 @@ body {
     right: 0px;
 }
 
+.testrun-menu table {
+    background-color: inherit;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 0;
+}
+
+.testrun-menu table td + td {    
+    padding-left: 8px;
+}
+
+.testrun-menu table a {
+    display: inline-block;
+    color: #000;
+    background-color: #fff;
+    border: 1px solid #cab4de;
+    min-width: 32px;
+    line-height: 32px;
+    text-decoration: none;
+}
+
+.testrun-menu table a:hover {
+    background-color: #cab4de;
+    border-color: #ab88ce;
+}
+
+.testrun-menu table a.selected {
+    background-color: #8f7aa4;
+    color: #fff;
+    border-color: #8d4eb2;
+}
+
+.testrun-menu table a.failed {
+    color: #fff;
+    background-color: #d72929;
+    border-color: #8b0909;
+}
+
+.testrun-menu table a.failed:hover {
+    background-color: #f33c3c;
+}
+
 .vendorlink span {
     filter: grayscale(100%);
     -webkit-filter: grayscale(100%);
