@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Xml.Linq;
 using UvTestRunner.Data;
 using UvTestRunner.Models;
 
@@ -142,7 +143,9 @@ namespace UvTestRunner.Services
                 var pngFileDst = Path.Combine(outputDirectory, Path.GetFileName(pngFileSrc));
                 CopyFile(pngFileSrc, pngFileDst);
             }
-            UpdateTestRunStatus(id, TestRunStatus.Succeeded);
+
+            var resultStatus = GetStatusFromTestResult(trxFileSrc);
+            UpdateTestRunStatus(id, resultStatus);
 
             return id;
         }
@@ -197,7 +200,7 @@ namespace UvTestRunner.Services
                 return previousStatus;
             }
         }
-
+        
         /// <summary>
         /// Copies a file and does not return until copying is complete.
         /// </summary>
@@ -213,6 +216,26 @@ namespace UvTestRunner.Services
                     srcStream.CopyTo(dstStream);
                 }
             }
+        }
+
+        /// <summary>
+        /// Gets the test run status from the specified test result file.
+        /// </summary>
+        /// <param name="file">The path to the test result file to read.</param>
+        /// <returns>A <see cref="TestRunStatus"/> value that represents the status of the specified test.</returns>
+        private TestRunStatus GetStatusFromTestResult(String file)
+        {
+            var testResultXml = XDocument.Load(file);
+            var testResultNamespace = testResultXml.Root.GetDefaultNamespace();
+
+            var testResults = testResultXml.Descendants(testResultNamespace + "UnitTestResult");
+            var testOutcomes = testResults.Select(x => (String)x.Attribute("outcome"));
+            if (testOutcomes.Where(x => String.Equals("Failed", x)).Any())
+            {
+                return TestRunStatus.Failed;
+            }
+
+            return TestRunStatus.Succeeded;
         }
     }
 }
