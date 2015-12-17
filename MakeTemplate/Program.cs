@@ -221,6 +221,7 @@ namespace MakeTemplate
                 projectReference.ReplaceWith(asmReference);
             }
 
+            var nativeLibRegex = new Regex(@"\.\.\\(\w+)\\(?<lib>\w+)\\(?<arch>\w+)\\(?<plat>\w+)\\(?<dll>\w+\.(dll|so|dylib))", RegexOptions.Singleline);
             var nativeLibReferences = (from x in xml.Descendants(xmlNs + "None")
                                        let incl = (String)x.Attribute("Include")
                                        let link = x.Element(xmlNs + "Link")
@@ -231,12 +232,19 @@ namespace MakeTemplate
 
             foreach (var nativeLibReference in nativeLibReferences)
             {
-                var nativeLibPath = nativeLibReference.Attribute("Include").Value.Replace("..", "$(MSBuildProgramFiles32)\\Ultraviolet Framework\\" + version);
-                var nativeLibLink = nativeLibReference.Element(xmlNs + "Link");
+                var path = nativeLibReference.Attribute("Include").Value;
 
-                nativeLibReference.ReplaceWith(new XElement(xmlNs + "None", new XAttribute("Include", nativeLibPath),
-                    new XElement(xmlNs + "Link", nativeLibLink.Value),
-                    new XElement(xmlNs + "CopyToOutputDirectory", "PreserveNewest")));
+                var pathMatch = nativeLibRegex.Match(path);
+                if (pathMatch.Success)
+                {
+                    var nativeLibPath = String.Format("$(MSBuildProgramFiles32)\\Ultraviolet Framework\\{0}\\Dependencies\\{1}\\{2}\\{3}", version, 
+                        pathMatch.Groups["arch"].Value, pathMatch.Groups["plat"].Value, pathMatch.Groups["dll"].Value);
+                    var nativeLibLink = nativeLibReference.Element(xmlNs + "Link");
+
+                    nativeLibReference.ReplaceWith(new XElement(xmlNs + "None", new XAttribute("Include", nativeLibPath),
+                        new XElement(xmlNs + "Link", nativeLibLink.Value),
+                        new XElement(xmlNs + "CopyToOutputDirectory", "PreserveNewest")));
+                }
             }
 
             xml.Save(file);
