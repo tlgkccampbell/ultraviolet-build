@@ -11,8 +11,8 @@ namespace MakeTemplate
     {
         public static void Main(String[] args)
         {
-            String srcDirectory, dstDirectory, outputFile;
-            if (!RetrieveArguments(args, out srcDirectory, out dstDirectory, out outputFile))
+            String version, srcDirectory, dstDirectory, outputFile;
+            if (!RetrieveArguments(args, out version, out srcDirectory, out dstDirectory, out outputFile))
                 return;
 
             // Copy the contents of the source directory to the destination directory.
@@ -24,7 +24,7 @@ namespace MakeTemplate
 
             // Scan the directory for C# files and perform template parameter replacements.
             ReplaceTemplateParametersInDirectory(dstDirectory);
-            ReplaceProjectReferencesInDirectory(dstDirectory);
+            ReplaceProjectReferencesInDirectory(dstDirectory, version);
 
             // Zip everything up.
             CreateTemplateArchive(dstDirectory, outputFile);
@@ -33,19 +33,21 @@ namespace MakeTemplate
         /// <summary>
         /// Validates and retrieves the program's command line arguments.
         /// </summary>
-        private static Boolean RetrieveArguments(String[] args, out String srcDirectory, out String dstDirectory, out String outputFile)
+        private static Boolean RetrieveArguments(String[] args, out String version, out String srcDirectory, out String dstDirectory, out String outputFile)
         {
-            if (args.Length != 3)
+            if (args.Length != 4)
             {
                 Console.WriteLine("Converts Ultraviolet's project template projects into Visual Studio project template archives.");
                 Console.WriteLine();
                 Console.WriteLine(
-                    "MAKETEMPLATE srcDirectory dstDirectory output\n" +
+                    "MAKETEMPLATE version srcDirectory dstDirectory output\n" +
                     "\n" +
+                    "  version      The Ultraviolet Framework version number (ex. 'v1.3')\n" +
                     "  srcDirectory The directory that contains the project to convert.\n" +
                     "  dstDirectory The directory that will be used to build the archive.\n" +
                     "  outputFile   The name of the archive file which is created.");
-                
+
+                version = null;
                 srcDirectory = null;
                 dstDirectory = null;
                 outputFile = null;
@@ -53,9 +55,10 @@ namespace MakeTemplate
                 return false;
             }
 
-            srcDirectory = args[0];
-            dstDirectory = args[1];
-            outputFile = args[2];
+            version = args[0];
+            srcDirectory = args[1];
+            dstDirectory = args[2];
+            outputFile = args[3];
 
             return true;
         }
@@ -180,19 +183,19 @@ namespace MakeTemplate
         /// <summary>
         /// Replaces project references in any .csproj files in the specified directory with generic assembly references.
         /// </summary>
-        private static void ReplaceProjectReferencesInDirectory(String directory)
+        private static void ReplaceProjectReferencesInDirectory(String directory, String version)
         {
             var files = Directory.EnumerateFiles(directory, "*.csproj");
             foreach (var file in files)
             {
-                ReplaceProjectReferencesInFile(file);
+                ReplaceProjectReferencesInFile(file, version);
             }
         }
 
         /// <summary>
         /// Replaces project references in the specified file with generic assembly references.
         /// </summary>
-        private static void ReplaceProjectReferencesInFile(String file)
+        private static void ReplaceProjectReferencesInFile(String file, String version)
         {
             var xml = XDocument.Load(file);
             var xmlNs = xml.Root.GetDefaultNamespace();
@@ -216,6 +219,24 @@ namespace MakeTemplate
                     new XAttribute("Include", asmName));
 
                 projectReference.ReplaceWith(asmReference);
+            }
+
+            var nativeLibReferences = (from x in xml.Descendants(xmlNs + "None")
+                                       let incl = (String)x.Attribute("Include")
+                                       let link = x.Element(xmlNs + "Link")
+                                       where
+                                         link != null &&
+                                         incl != null && incl.StartsWith("..")
+                                       select x).ToList();
+
+            foreach (var nativeLibReference in nativeLibReferences)
+            {
+                var nativeLibPath = nativeLibReference.Attribute("Include").Value.Replace("..", "$(MSBuildProgramFiles32)\\Ultraviolet Framework\\" + version);
+                var nativeLibLink = nativeLibReference.Element(xmlNs + "Link");
+
+                nativeLibReference.ReplaceWith(new XElement(xmlNs + "None", new XAttribute("Include", nativeLibPath),
+                    new XElement(xmlNs + "Link", nativeLibLink.Value),
+                    new XElement(xmlNs + "CopyToOutputDirectory", "PreserveNewest")));
             }
 
             xml.Save(file);
