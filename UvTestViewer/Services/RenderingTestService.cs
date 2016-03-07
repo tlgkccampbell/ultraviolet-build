@@ -77,7 +77,7 @@ namespace UvTestViewer.Services
                 PassedTestCount = tests.Where(x => !x.Failed).Count(),
                 FailedTestCount = tests.Where(x => x.Failed).Count(),
                 SelectedPage = page,
-                Tests = resultTests[page].ToList(),
+                Tests = resultTests.Any() ? resultTests[page].ToList() : new List<RenderingTest>(),
                 Pages = resultPages.ToList(),
                 TimeProcessed = directory.CreationTime,
                 Vendor = vendor
