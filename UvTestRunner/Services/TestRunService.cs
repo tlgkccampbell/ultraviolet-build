@@ -101,6 +101,11 @@ namespace UvTestRunner.Services
                 return id;
             }
 
+            // Determine the location of the test result file...
+            var testResultsRoot = Path.Combine(Settings.Default.TestRootDirectory, workingDirectory, Settings.Default.TestOutputDirectory);
+            var testResultPath = String.Empty;
+            var testResultImagesPath = String.Empty;
+
             /* If the tests ran successfully, find the folder that contains the test results.
              * TODO: The way we do this currently introduces a race condition if the test suite is being run simultaneously
              * in multiple threads, which shouldn't realistically happen, but this case probably
@@ -108,7 +113,6 @@ namespace UvTestRunner.Services
             DirectoryInfo relevantTestResult;
             try
             {
-                var testResultsRoot = Path.Combine(Settings.Default.TestRootDirectory, workingDirectory, Settings.Default.TestOutputDirectory);
                 var testFramework = (Settings.Default.TestFramework ?? "mstest").ToLowerInvariant();
                 if (testFramework == "mstest")
                 {
@@ -123,10 +127,16 @@ namespace UvTestRunner.Services
                         UpdateTestRunStatus(id, TestRunStatus.Failed);
                         return id;
                     }
+                    
+                    testResultPath = Path.ChangeExtension(Path.Combine(relevantTestResult.Parent.FullName, relevantTestResult.Name), "trx");
+                    testResultImagesPath = Path.Combine(relevantTestResult.FullName, "Out");
                 }
                 else
                 {
                     relevantTestResult = new DirectoryInfo(testResultsRoot);
+
+                    testResultPath = Path.Combine(testResultsRoot, Settings.Default.TestResultFile);
+                    testResultImagesPath = testResultsRoot;
                 }
             }
             catch (DirectoryNotFoundException)
@@ -140,13 +150,11 @@ namespace UvTestRunner.Services
             Directory.CreateDirectory(outputDirectory);
 
             // Copy the result file and any outputted PNG files to the artifact directory.
-            var resultFileType = Settings.Default.TestResultFileType ?? "trx";
-            var resultFileName = Settings.Default.TestResultFile ?? "Result.trx";
-            var resultFileSrc = Path.ChangeExtension(Path.Combine(relevantTestResult.Parent.FullName, relevantTestResult.Name), resultFileType);
-            var resultFileDst = Path.Combine(outputDirectory, resultFileName);
+            var resultFileSrc = testResultPath;
+            var resultFileDst = Path.Combine(outputDirectory, Settings.Default.TestResultFile);
             CopyFile(resultFileSrc, resultFileDst);
 
-            var pngFiles = Directory.GetFiles(Path.Combine(relevantTestResult.FullName, "Out"), "*.png");
+            var pngFiles = Directory.GetFiles(testResultImagesPath, "*.png");
             foreach (var pngFile in pngFiles)
             {
                 var pngFileSrc = pngFile;
