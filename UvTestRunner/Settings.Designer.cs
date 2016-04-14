@@ -114,51 +114,39 @@ namespace UvTestRunner {
             }
         }
         
-        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("Result.trx")]
         public string TestResultFile {
             get {
                 return ((string)(this["TestResultFile"]));
             }
-            set {
-                this["TestResultFile"] = value;
-            }
         }
         
-        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("trx")]
         public string TestResultFileType {
             get {
                 return ((string)(this["TestResultFileType"]));
             }
-            set {
-                this["TestResultFileType"] = value;
-            }
         }
         
-        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("TestResults")]
         public string TestOutputDirectory {
             get {
                 return ((string)(this["TestOutputDirectory"]));
             }
-            set {
-                this["TestOutputDirectory"] = value;
-            }
         }
         
-        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("mstest")]
         public string TestFramework {
             get {
                 return ((string)(this["TestFramework"]));
-            }
-            set {
-                this["TestFramework"] = value;
             }
         }
     }

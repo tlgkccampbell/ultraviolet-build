@@ -32,16 +32,16 @@
     <Setting Name="ColorDark" Type="System.ConsoleColor" Scope="Application">
       <Value Profile="(Default)">DarkGreen</Value>
     </Setting>
-    <Setting Name="TestResultFile" Type="System.String" Scope="User">
+    <Setting Name="TestResultFile" Type="System.String" Scope="Application">
       <Value Profile="(Default)">Result.trx</Value>
     </Setting>
-    <Setting Name="TestResultFileType" Type="System.String" Scope="User">
+    <Setting Name="TestResultFileType" Type="System.String" Scope="Application">
       <Value Profile="(Default)">trx</Value>
     </Setting>
-    <Setting Name="TestOutputDirectory" Type="System.String" Scope="User">
+    <Setting Name="TestOutputDirectory" Type="System.String" Scope="Application">
       <Value Profile="(Default)">TestResults</Value>
     </Setting>
-    <Setting Name="TestFramework" Type="System.String" Scope="User">
+    <Setting Name="TestFramework" Type="System.String" Scope="Application">
       <Value Profile="(Default)">mstest</Value>
     </Setting>
   </Settings>
