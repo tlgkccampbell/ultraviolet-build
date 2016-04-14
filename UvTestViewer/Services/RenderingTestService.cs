@@ -208,6 +208,72 @@ namespace UvTestViewer.Services
             }
             catch (IOException) { }
 
+            var testFramework = (ConfigurationManager.AppSettings["TestFramework"] ?? "mstest").ToLowerInvariant();
+            switch (testFramework)
+            {
+                case "nunit3":
+                    return RetrieveCachedTestInfo_NUnit3(dir, cacheFilename, serializer);
+
+                case "mstest":
+                    return RetrieveCachedTestInfo_MSTest(dir, cacheFilename, serializer);
+
+                default:
+                    throw new NotSupportedException("Unsupported test framework");
+            }            
+        }
+
+        /// <summary>
+        /// Retrieves cached test info for the NUnit3 framework.
+        /// </summary>
+        private static IEnumerable<CachedTestInfo> RetrieveCachedTestInfo_NUnit3(DirectoryInfo dir, String cacheFilename, XmlSerializer serializer)
+        {
+            try
+            {
+                var testResultFilename = Path.Combine(dir.FullName, "TestResult.xml");
+                var testResultXml = XDocument.Load(testResultFilename);
+                var testResultNamespace = testResultXml.Root.GetDefaultNamespace();
+
+                var unitTests = testResultXml.Root.Descendants(testResultNamespace + "test-case")
+                    .Where(x => x.Descendants(testResultNamespace + "category").Any(y => (String)y.Attribute("name") == "Rendering"));
+
+                var failedTestNames = new HashSet<String>
+                    (from r in unitTests
+                     let testName = (String)r.Attribute("name")
+                     let testResult = (String)r.Attribute("result")
+                     where
+                         testResult == "Failed"
+                     select testName);
+
+                var cachedTestInfos =
+                    (from node in unitTests
+                     let name = (String)node.Attribute("name")
+                     let desc = (String)node.Descendants(testResultNamespace + "property").Where(x => (String)x.Attribute("name") == "Description").SingleOrDefault()
+                     let status = failedTestNames.Contains(name) ? CachedTestInfoStatus.Failed : CachedTestInfoStatus.Succeeded
+                     select new CachedTestInfo
+                     {
+                         Name = name,
+                         Description = desc,
+                         Status = status,
+                     }).ToList();
+
+                using (var stream = File.OpenWrite(cacheFilename))
+                {
+                    serializer.Serialize(stream, cachedTestInfos);
+                }
+
+                return cachedTestInfos;
+            }
+            catch (IOException)
+            {
+                return Enumerable.Empty<CachedTestInfo>();
+            }
+        }
+
+        /// <summary>
+        /// Retrieves cached test info for the MSTest framework.
+        /// </summary>
+        private static IEnumerable<CachedTestInfo> RetrieveCachedTestInfo_MSTest(DirectoryInfo dir, String cacheFilename, XmlSerializer serializer)
+        {
             try
             {
                 var testResultFilename = Path.Combine(dir.FullName, "Result.trx");
@@ -217,7 +283,7 @@ namespace UvTestViewer.Services
                 var unitTests = testResultXml.Root.Descendants(testResultNamespace + "UnitTest")
                     .Where(x => x.Descendants(testResultNamespace + "TestCategoryItem").Any(y => (String)y.Attribute("TestCategory") == "Rendering"));
                 var unitTestResults = testResultXml.Root.Descendants(testResultNamespace + "UnitTestResult");
-                
+
                 var failedTestNames = new HashSet<String>
                     (from r in unitTestResults
                      let testName = (String)r.Attribute("testName")

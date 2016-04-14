@@ -85,7 +85,7 @@ namespace UvTestRunner.Services
             var id = testRun.ID;
             var workingDirectory = testRun.WorkingDirectory;
 
-            // Start by spawning the MSTest process and running the unit test suite.
+            // Start by spawning the test runner process and running the unit test suite.
             UpdateTestRunStatus(id, TestRunStatus.Running);
             var psi = new ProcessStartInfo(Settings.Default.TestHostExecutable, Settings.Default.TestHostArgs)
             {
@@ -94,7 +94,7 @@ namespace UvTestRunner.Services
             var proc = Process.Start(psi);
             proc.WaitForExit();
 
-            // If MSTest exited with an error, log it to the database and bail out.
+            // If the test runner exited with an error, log it to the database and bail out.
             if (proc.ExitCode != 0 && proc.ExitCode != 1)
             {
                 UpdateTestRunStatus(id, TestRunStatus.Failed);
@@ -108,17 +108,25 @@ namespace UvTestRunner.Services
             DirectoryInfo relevantTestResult;
             try
             {
-                var testResultsRoot = Path.Combine(Settings.Default.TestRootDirectory, workingDirectory, "TestResults");
-                var testResultsDirs = Directory.GetDirectories(testResultsRoot)
-                    .Where(x => x.Contains("_" + Environment.MachineName.ToUpper() + " "))
-                    .Select(x => new DirectoryInfo(x));
-
-                relevantTestResult = testResultsDirs.OrderByDescending(x => x.CreationTimeUtc).FirstOrDefault();
-
-                if (relevantTestResult == null)
+                var testResultsRoot = Path.Combine(Settings.Default.TestRootDirectory, workingDirectory, Settings.Default.TestOutputDirectory);
+                var testFramework = (Settings.Default.TestFramework ?? "mstest").ToLowerInvariant();
+                if (testFramework == "mstest")
                 {
-                    UpdateTestRunStatus(id, TestRunStatus.Failed);
-                    return id;
+                    var testResultsDirs = Directory.GetDirectories(testResultsRoot)
+                        .Where(x => x.Contains("_" + Environment.MachineName.ToUpper() + " "))
+                        .Select(x => new DirectoryInfo(x));
+
+                    relevantTestResult = testResultsDirs.OrderByDescending(x => x.CreationTimeUtc).FirstOrDefault();
+
+                    if (relevantTestResult == null)
+                    {
+                        UpdateTestRunStatus(id, TestRunStatus.Failed);
+                        return id;
+                    }
+                }
+                else
+                {
+                    relevantTestResult = new DirectoryInfo(testResultsRoot);
                 }
             }
             catch (DirectoryNotFoundException)
@@ -131,10 +139,12 @@ namespace UvTestRunner.Services
             var outputDirectory = Path.Combine(Settings.Default.TestResultDirectory, workingDirectory, id.ToString());
             Directory.CreateDirectory(outputDirectory);
 
-            // Copy the TRX file and any outputted PNG files to the artifact directory.
-            var trxFileSrc = Path.ChangeExtension(Path.Combine(relevantTestResult.Parent.FullName, relevantTestResult.Name), "trx");
-            var trxFileDst = Path.Combine(outputDirectory, "Result.trx");
-            CopyFile(trxFileSrc, trxFileDst);
+            // Copy the result file and any outputted PNG files to the artifact directory.
+            var resultFileType = Settings.Default.TestResultFileType ?? "trx";
+            var resultFileName = Settings.Default.TestResultFile ?? "Result.trx";
+            var resultFileSrc = Path.ChangeExtension(Path.Combine(relevantTestResult.Parent.FullName, relevantTestResult.Name), resultFileType);
+            var resultFileDst = Path.Combine(outputDirectory, resultFileName);
+            CopyFile(resultFileSrc, resultFileDst);
 
             var pngFiles = Directory.GetFiles(Path.Combine(relevantTestResult.FullName, "Out"), "*.png");
             foreach (var pngFile in pngFiles)
@@ -144,7 +154,7 @@ namespace UvTestRunner.Services
                 CopyFile(pngFileSrc, pngFileDst);
             }
 
-            var resultStatus = GetStatusFromTestResult(trxFileSrc);
+            var resultStatus = GetStatusFromTestResult(resultFileSrc);
             UpdateTestRunStatus(id, resultStatus);
 
             return id;
