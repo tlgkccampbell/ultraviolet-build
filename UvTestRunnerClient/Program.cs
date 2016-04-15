@@ -29,11 +29,11 @@ namespace UvTestRunnerClient
                 Task.WaitAll(taskSpawnIntel, taskSpawnNvidia, taskSpawnAmd);
 
                 var taskIntel = Task.Run(() => WaitForTestRunToComplete(taskSpawnIntel.Result, "Intel", Settings.Default.UvTestRunnerUrlIntel,
-                    agentWorkingDirectory, buildWorkingDirectory, Settings.Default.OutputNameIntel));
+                    agentWorkingDirectory, buildWorkingDirectory, Settings.Default.InputNameIntel, Settings.Default.OutputNameIntel));
                 var taskNvidia = Task.Run(() => WaitForTestRunToComplete(taskSpawnNvidia.Result, "Nvidia", Settings.Default.UvTestRunnerUrlNvidia,
-                    agentWorkingDirectory, buildWorkingDirectory, Settings.Default.OutputNameNvidia));
+                    agentWorkingDirectory, buildWorkingDirectory, Settings.Default.InputNameNvidia, Settings.Default.OutputNameNvidia));
                 var taskAmd = Task.Run(() => WaitForTestRunToComplete(taskSpawnAmd.Result, "Amd", Settings.Default.UvTestRunnerUrlAmd,
-                    agentWorkingDirectory, buildWorkingDirectory, Settings.Default.OutputNameAmd));
+                    agentWorkingDirectory, buildWorkingDirectory, Settings.Default.InputNameAmd, Settings.Default.OutputNameAmd));
 
                 Task.WaitAll(taskIntel, taskNvidia, taskAmd);
 
@@ -63,9 +63,11 @@ namespace UvTestRunnerClient
         /// <param name="testRunnerUrl">The URL of the test runner server.</param>
         /// <param name="agentWorkingDirectory">The working directory for the current build agent.</param>
         /// <param name="buildWorkingDirectory">The working directory for the current build.</param>
+        /// <param name="inputName">The name of the input result file.</param>
         /// <param name="outputName">The name to give to the result file.</param>
         /// <returns>The path to the output result file.</returns>
-        private static async Task<String> WaitForTestRunToComplete(Int64? id, String vendor, String testRunnerUrl, String agentWorkingDirectory, String buildWorkingDirectory, String outputName)
+        private static async Task<String> WaitForTestRunToComplete(Int64? id, 
+            String vendor, String testRunnerUrl, String agentWorkingDirectory, String buildWorkingDirectory, String inputName, String outputName)
         {
             if (id == null)
                 return null;
@@ -83,7 +85,7 @@ namespace UvTestRunnerClient
                 }
 
                 // Spit out the result file.
-                var resultData = await RetrieveTestResult(vendor, agentWorkingDirectory, buildWorkingDirectory, idValue);
+                var resultData = await RetrieveTestResult(vendor, agentWorkingDirectory, buildWorkingDirectory, inputName, idValue);
                 var resultPath = Path.Combine(buildWorkingDirectory, outputName);
                 File.WriteAllBytes(resultPath, resultData);
 
@@ -165,9 +167,10 @@ namespace UvTestRunnerClient
         /// <param name="vendor">The vendor for which to retrieve test results.</param>
         /// <param name="agentWorkingDirectory">The working directory for the current build agent.</param>
         /// <param name="buildWorkingDirectory">The working directory for the current build.</param>
+        /// <param name="inputName">The name of the input result file.</param>
         /// <param name="id">The identifier of the test run within the server's database.</param>
         /// <returns>The contents of the test result file associated with the specified test run.</returns>
-        private static async Task<Byte[]> RetrieveTestResult(String vendor, String agentWorkingDirectory, String buildWorkingDirectory, Int64 id)
+        private static async Task<Byte[]> RetrieveTestResult(String vendor, String agentWorkingDirectory, String buildWorkingDirectory, String inputName, Int64 id)
         {
             Console.WriteLine("Retreiving test result for {0}...", vendor);
 
@@ -180,7 +183,7 @@ namespace UvTestRunnerClient
                     new Uri(AddTrailingSlashToPath(agentWorkingDirectory)).MakeRelativeUri(
                     new Uri(AddTrailingSlashToPath(buildWorkingDirectory)));
 
-                var request = Path.Combine("TestResults", vendor, dirRelative.ToString(), id.ToString(), "Result.trx").Replace('\\', '/');
+                var request = Path.Combine("TestResults", vendor, dirRelative.ToString(), id.ToString(), inputName).Replace('\\', '/');
                 var response = await client.GetAsync(request);
 
                 if (!response.IsSuccessStatusCode)

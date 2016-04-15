@@ -85,5 +85,32 @@ namespace UvTestRunnerClient {
                 return ((string)(this["OutputNameNvidia"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Result.trx")]
+        public string InputNameIntel {
+            get {
+                return ((string)(this["InputNameIntel"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Result.trx")]
+        public string InputNameNvidia {
+            get {
+                return ((string)(this["InputNameNvidia"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Result.trx")]
+        public string InputNameAmd {
+            get {
+                return ((string)(this["InputNameAmd"]));
+            }
+        }
     }
 }
