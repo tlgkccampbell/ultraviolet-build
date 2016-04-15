@@ -229,7 +229,7 @@ namespace UvTestViewer.Services
         {
             try
             {
-                var testResultFilename = Path.Combine(dir.FullName, "TestResult.xml");
+                var testResultFilename = dir.GetFiles("*.xml").SingleOrDefault()?.FullName;
                 var testResultXml = XDocument.Load(testResultFilename);
                 var testResultNamespace = testResultXml.Root.GetDefaultNamespace();
 
@@ -247,11 +247,11 @@ namespace UvTestViewer.Services
                 var cachedTestInfos =
                     (from node in unitTests
                      let name = (String)node.Attribute("name")
-                     let desc = (String)node.Descendants(testResultNamespace + "property").Where(x => (String)x.Attribute("name") == "Description").SingleOrDefault()
+                     let desc = (String)node.Descendants(testResultNamespace + "property").Where(x => (String)x.Attribute("name") == "Description").SingleOrDefault()?.Attribute("value")
                      let status = failedTestNames.Contains(name) ? CachedTestInfoStatus.Failed : CachedTestInfoStatus.Succeeded
                      select new CachedTestInfo
                      {
-                         Name = name,
+                         Name = GetNUnitTestName(name),
                          Description = desc,
                          Status = status,
                      }).ToList();
@@ -315,6 +315,18 @@ namespace UvTestViewer.Services
             {
                 return Enumerable.Empty<CachedTestInfo>();
             }
+        }
+
+        /// <summary>
+        /// Gets the simple name of an NUnit test.
+        /// </summary>
+        private static String GetNUnitTestName(String name)
+        {
+            var ix = name.LastIndexOf('.');
+            if (ix < 0)
+                return name;
+
+            return name.Substring(ix + 1);
         }
     }
 }
