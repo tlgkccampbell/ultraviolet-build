@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Xml.Linq;
 using UvTestRunner.Data;
 using UvTestRunner.Models;
@@ -136,7 +137,7 @@ namespace UvTestRunner.Services
                     relevantTestResult = new DirectoryInfo(testResultsRoot);
 
                     testResultPath = Path.Combine(testResultsRoot, Settings.Default.TestResultFile);
-                    testResultImagesPath = testResultsRoot;
+                    testResultImagesPath = Path.Combine(testResultsRoot, GetSanitizedMachineName());
                 }
             }
             catch (DirectoryNotFoundException)
@@ -254,6 +255,23 @@ namespace UvTestRunner.Services
             }
 
             return TestRunStatus.Succeeded;
+        }
+        
+        /// <summary>
+        /// Gets the current machine's name, with any path-invalid characters removed.
+        /// </summary>
+        private String GetSanitizedMachineName()
+        {
+            var invalid = Path.GetInvalidPathChars();
+            var name = new StringBuilder(Environment.MachineName);
+            for (int i = 0; i < name.Length; i++)
+            {
+                if (invalid.Contains(name[i]))
+                {
+                    name[i] = '_';
+                }
+            }
+            return name.ToString();
         }
     }
 }
