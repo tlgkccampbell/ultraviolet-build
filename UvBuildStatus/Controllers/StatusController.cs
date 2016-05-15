@@ -13,7 +13,7 @@ namespace UvBuildStatus.Controllers
     [Route("status")]
     public class StatusController : ApiController
     {
-        public async Task<HttpResponseMessage> Get(String planKeys)
+        public async Task<HttpResponseMessage> Get(String planKeys, Boolean dim = false)
         {
             var splitPlanKeys = String.IsNullOrEmpty(planKeys) ? null : planKeys.Split(';');
             if (splitPlanKeys == null)
@@ -49,7 +49,9 @@ namespace UvBuildStatus.Controllers
             
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent(failed ? "#ff0000" : "#00ff00")
+                Content = new StringContent(dim ? 
+                    failed ? "#400000" : "#004000" :
+                    failed ? "#ff0000" : "#00ff00")
             };
         }
 

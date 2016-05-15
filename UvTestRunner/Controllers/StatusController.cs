@@ -13,7 +13,7 @@ namespace UvTestRunner.Controllers
     public class StatusController : ApiController
     {
         [Route("api/status")]
-        public async Task<HttpResponseMessage> Get()
+        public async Task<HttpResponseMessage> Get(Boolean dim = false)
         {
             var excludedPlans = (Settings.Default.BambooExcludedPlans ?? String.Empty).Split(';');
 
@@ -42,15 +42,15 @@ namespace UvTestRunner.Controllers
             var status = testRunService.GetMostRecentStatusByWorkingDirectories(workingDirectories);
 
             if (status == Models.TestRunStatus.Failed)
-                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("#ff0000") };
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(dim ? "#400000" : "#ff0000") };
 
             if (status == Models.TestRunStatus.Pending || status == Models.TestRunStatus.Running)
-                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("#ffff00") };
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(dim ? "#404000" : "#ffff00") };
 
             if (status == Models.TestRunStatus.Succeeded)
-                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("#00ff00") };
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(dim ? "#004000" : "#00ff00") };
 
-            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("#ffffff") };
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(dim ? "#404040" : "#ffffff") };
         }        
     }
 }
