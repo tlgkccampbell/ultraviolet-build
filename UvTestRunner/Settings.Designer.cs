@@ -149,5 +149,14 @@ namespace UvTestRunner {
                 return ((string)(this["TestFramework"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string TestNameRewriteRule {
+            get {
+                return ((string)(this["TestNameRewriteRule"]));
+            }
+        }
     }
 }

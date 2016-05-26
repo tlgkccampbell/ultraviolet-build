@@ -106,6 +106,7 @@ namespace UvTestRunner.Services
             var testResultsRoot = Path.Combine(Settings.Default.TestRootDirectory, workingDirectory, Settings.Default.TestOutputDirectory);
             var testResultPath = String.Empty;
             var testResultImagesPath = String.Empty;
+            var testFramework = (Settings.Default.TestFramework ?? "mstest").ToLowerInvariant();
 
             /* If the tests ran successfully, find the folder that contains the test results.
              * TODO: The way we do this currently introduces a race condition if the test suite is being run simultaneously
@@ -114,7 +115,6 @@ namespace UvTestRunner.Services
             DirectoryInfo relevantTestResult;
             try
             {
-                var testFramework = (Settings.Default.TestFramework ?? "mstest").ToLowerInvariant();
                 if (testFramework == "mstest")
                 {
                     var testResultsDirs = Directory.GetDirectories(testResultsRoot)
@@ -128,7 +128,7 @@ namespace UvTestRunner.Services
                         UpdateTestRunStatus(id, TestRunStatus.Failed);
                         return id;
                     }
-                    
+
                     testResultPath = Path.ChangeExtension(Path.Combine(relevantTestResult.Parent.FullName, relevantTestResult.Name), "trx");
                     testResultImagesPath = Path.Combine(relevantTestResult.FullName, "Out");
                 }
@@ -144,6 +144,21 @@ namespace UvTestRunner.Services
             {
                 UpdateTestRunStatus(id, TestRunStatus.Failed);
                 return id;
+            }
+
+            // Optionally rewrite test names.
+            if (!String.IsNullOrEmpty(Settings.Default.TestNameRewriteRule))
+            {
+                switch (testFramework)
+                {
+                    case "mstest":
+                        RewriteTestNames_MSTest(testResultPath);
+                        break;
+
+                    case "nunit3":
+                        RewriteTestNames_NUnit3(testResultPath);
+                        break;
+                }
             }
 
             // Create a directory to hold this test's artifacts.
@@ -272,6 +287,34 @@ namespace UvTestRunner.Services
                 }
             }
             return name.ToString();
+        }
+
+        /// <summary>
+        /// Rewrites the names found in the specified results file based on the current rewrite rule.
+        /// </summary>
+        private void RewriteTestNames_MSTest(String path)
+        {
+            throw new NotSupportedException();
+        }
+
+        /// <summary>
+        /// Rewrites the names found in the specified results file based on the current rewrite rule.
+        /// </summary>
+        private void RewriteTestNames_NUnit3(String path)
+        {
+            var testResultXml = XDocument.Load(path);
+            var testResultNamespace = testResultXml.Root.GetDefaultNamespace();
+
+            var tests = testResultXml.Root.Descendants(testResultNamespace + "test-case");
+
+            foreach (var test in tests)
+            {
+                var name = (String)test.Attribute("name");
+                name = String.Format(Settings.Default.TestNameRewriteRule, name);
+                test.SetAttributeValue("name", name);
+            }
+
+            testResultXml.Save(path);
         }
     }
 }
