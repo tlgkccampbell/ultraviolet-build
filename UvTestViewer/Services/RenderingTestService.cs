@@ -50,9 +50,11 @@ namespace UvTestViewer.Services
             var tests = new List<RenderingTest>();
             foreach (var cachedTestInfo in cachedTestInfos)
             {
-                var testExpected = String.Format("{0}_Expected.png", cachedTestInfo.Name);
-                var testActual = String.Format("{0}_Actual.png", cachedTestInfo.Name);
-                var testDiff =  String.Format("{0}_Diff.png", cachedTestInfo.Name);
+                var imageName = cachedTestInfo.Name.Split(' ').First();
+
+                var testExpected = String.Format("{0}_Expected.png", imageName);
+                var testActual = String.Format("{0}_Actual.png", imageName);
+                var testDiff =  String.Format("{0}_Diff.png", imageName);
 
                 var test = new RenderingTest(cachedTestInfo.Name, cachedTestInfo.Description,
                     GetRelativeUrlOfImage(outputDir, testExpected),
