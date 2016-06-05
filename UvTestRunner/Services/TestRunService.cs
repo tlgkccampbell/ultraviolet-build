@@ -96,7 +96,12 @@ namespace UvTestRunner.Services
             proc.WaitForExit();
 
             // If the test runner exited with an error, log it to the database and bail out.
-            if (proc.ExitCode != 0 && proc.ExitCode != 1)
+            var testFramework = (Settings.Default.TestFramework ?? "mstest").ToLowerInvariant();
+            var testFrameworkFailed = (testFramework == "mstest") ?
+                (proc.ExitCode != 0 && proc.ExitCode != 1) :
+                (proc.ExitCode < 0);
+
+            if (testFrameworkFailed)
             {
                 UpdateTestRunStatus(id, TestRunStatus.Failed);
                 return id;
@@ -106,7 +111,6 @@ namespace UvTestRunner.Services
             var testResultsRoot = Path.Combine(Settings.Default.TestRootDirectory, workingDirectory, Settings.Default.TestOutputDirectory);
             var testResultPath = String.Empty;
             var testResultImagesPath = String.Empty;
-            var testFramework = (Settings.Default.TestFramework ?? "mstest").ToLowerInvariant();
 
             /* If the tests ran successfully, find the folder that contains the test results.
              * TODO: The way we do this currently introduces a race condition if the test suite is being run simultaneously
