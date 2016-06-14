@@ -203,7 +203,7 @@ namespace MakeTemplate
             var projectReferences = xml.Descendants().Where(
                 x => x.Name == xmlNs + "ProjectReference").ToList();
 
-            var platformSpecifiers = new String[] { " (Desktop)", " %28Desktop%29", " (Android)", " %28Android%29" };
+            var platformSpecifiers = new String[] { " (Desktop)", " %28Desktop%29", " (Android)", " %28Android%29", " (iOS)", " %28iOS%29" };
 
             foreach (var projectReference in projectReferences)
             {
