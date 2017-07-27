@@ -88,7 +88,7 @@ namespace UvTestRunner.Services
 
             // Start by spawning the test runner process and running the unit test suite.
             UpdateTestRunStatus(id, TestRunStatus.Running);
-            var psi = new ProcessStartInfo(Settings.Default.TestHostExecutable, Settings.Default.TestHostArgs)
+            var psi = new ProcessStartInfo(Settings.Default.TestHostExecutable, String.Format(Settings.Default.TestHostArgs, testRun.TestAssembly ?? "Ultraviolet.Tests.dll"))
             {
                 WorkingDirectory = Path.Combine(Settings.Default.TestRootDirectory, workingDirectory).Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
             };
@@ -192,12 +192,13 @@ namespace UvTestRunner.Services
         /// Creates a new test run and places it into pending status.
         /// </summary>
         /// <param name="workingDirectory">The current working directory for the build agent.</param>
+        /// <param name="testAssembly">The name of the assembly that contains the tests.</param>
         /// <returns>The identifier of the test run within the database.</returns>
-        public Int64 CreateTestRun(String workingDirectory)
+        public Int64 CreateTestRun(String workingDirectory, String testAssembly)
         {
             using (var testRunContext = new TestRunContext())
             {
-                var run = new TestRun() { Status = TestRunStatus.Pending, WorkingDirectory = workingDirectory };
+                var run = new TestRun() { Status = TestRunStatus.Pending, WorkingDirectory = workingDirectory, TestAssembly = testAssembly };
 
                 testRunContext.TestRuns.Add(run);
                 testRunContext.SaveChanges();

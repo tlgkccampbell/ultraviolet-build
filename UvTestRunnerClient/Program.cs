@@ -16,15 +16,18 @@ namespace UvTestRunnerClient
                 ExitWithError(1, "Unable to execute tests. Missing value for ${bamboo.agentWorkingDirectory}.");
             if (args.Length < 2)
                 ExitWithError(2, "Unable to execute tests. Missing value for ${bamboo.build.working.directory}.");
+            if (args.Length < 3)
+                ExitWithError(3, "Unable to execute tests. Missing test assembly.");
 
             var agentWorkingDirectory = args[0];
             var buildWorkingDirectory = args[1];
+            var testAssembly = args[2];
 
             var succeeded = Task.Run(() =>
             {
-                var taskSpawnIntel = Task.Run(() => SpawnNewTestRun(Settings.Default.UvTestRunnerUrlIntel, agentWorkingDirectory, buildWorkingDirectory));
-                var taskSpawnNvidia = Task.Run(() => SpawnNewTestRun(Settings.Default.UvTestRunnerUrlNvidia, agentWorkingDirectory, buildWorkingDirectory));
-                var taskSpawnAmd = Task.Run(() => SpawnNewTestRun(Settings.Default.UvTestRunnerUrlAmd, agentWorkingDirectory, buildWorkingDirectory));
+                var taskSpawnIntel = Task.Run(() => SpawnNewTestRun(Settings.Default.UvTestRunnerUrlIntel, agentWorkingDirectory, buildWorkingDirectory, testAssembly));
+                var taskSpawnNvidia = Task.Run(() => SpawnNewTestRun(Settings.Default.UvTestRunnerUrlNvidia, agentWorkingDirectory, buildWorkingDirectory, testAssembly));
+                var taskSpawnAmd = Task.Run(() => SpawnNewTestRun(Settings.Default.UvTestRunnerUrlAmd, agentWorkingDirectory, buildWorkingDirectory, testAssembly));
 
                 Task.WaitAll(taskSpawnIntel, taskSpawnNvidia, taskSpawnAmd);
 
@@ -104,8 +107,9 @@ namespace UvTestRunnerClient
         /// <param name="testRunnerUrl">The URL of the test runner server.</param>
         /// <param name="agentWorkingDirectory">The working directory for the current build agent.</param>
         /// <param name="buildWorkingDirectory">The working directory for the current build.</param>
+        /// <param name="testAssembly">The name of the assembly which contains the tests.</param>
         /// <returns>The identifier of the test run within the server's database.</returns>
-        private static async Task<Int64?> SpawnNewTestRun(String testRunnerUrl, String agentWorkingDirectory, String buildWorkingDirectory)
+        private static async Task<Int64?> SpawnNewTestRun(String testRunnerUrl, String agentWorkingDirectory, String buildWorkingDirectory, String testAssembly)
         {
             if (String.IsNullOrEmpty(testRunnerUrl))
                 return null;
@@ -121,7 +125,7 @@ namespace UvTestRunnerClient
                     new Uri(AddTrailingSlashToPath(agentWorkingDirectory)).MakeRelativeUri(
                     new Uri(AddTrailingSlashToPath(buildWorkingDirectory)));
                 
-                var response = await client.PostAsync("Api/UvTest", new StringContent("\"" + dirRelative + "\"", Encoding.UTF8, "application/json"));
+                var response = await client.PostAsync("Api/UvTest", new StringContent($"\"{testAssembly},{dirRelative}\"", Encoding.UTF8, "application/json"));
                 if (!response.IsSuccessStatusCode)
                 {
                     Console.WriteLine("Failed to POST to test server at {0}: {1} {2}.", testRunnerUrl, (Int32)response.StatusCode, response.ReasonPhrase);

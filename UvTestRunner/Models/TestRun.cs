@@ -9,5 +9,6 @@ namespace UvTestRunner.Models
         public Int64 ID { get; set; }
         public TestRunStatus Status { get; set; }
         public String WorkingDirectory { get; set; }
+        public String TestAssembly { get; set; }
     }
 }

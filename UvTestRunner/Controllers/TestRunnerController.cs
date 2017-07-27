@@ -8,9 +8,16 @@ namespace UvTestRunner.Controllers
     public class TestRunnerController : ApiController
     {
         [Route("api/uvtest")]
-        public IHttpActionResult Post([FromBody] String workingDirectory)
+        public IHttpActionResult Post([FromBody] String metadata)
         {
-            var testRunID = TestRunQueueService.Instance.Create(workingDirectory);
+            var metadataParts = metadata?.Split(',');
+            if (metadataParts?.Length != 2)
+                return BadRequest("Invalid request metadata.");
+
+            var testAssembly = metadataParts[0];
+            var workingDirectory = metadataParts[1];
+
+            var testRunID = TestRunQueueService.Instance.Create(workingDirectory, testAssembly);
             return Ok(new TestRunCreationResponse() { TestRunID = testRunID });
         }
 
