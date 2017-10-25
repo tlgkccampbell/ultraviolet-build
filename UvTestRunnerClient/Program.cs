@@ -23,6 +23,8 @@ namespace UvTestRunnerClient
             var buildWorkingDirectory = args[1];
             var testAssembly = args[2];
 
+            Console.WriteLine("Spawning test runs.");
+
             var succeeded = Task.Run(() =>
             {
                 var taskSpawnIntel = Task.Run(() => SpawnNewTestRun(Settings.Default.UvTestRunnerUrlIntel, agentWorkingDirectory, buildWorkingDirectory, testAssembly));
@@ -30,6 +32,10 @@ namespace UvTestRunnerClient
                 var taskSpawnAmd = Task.Run(() => SpawnNewTestRun(Settings.Default.UvTestRunnerUrlAmd, agentWorkingDirectory, buildWorkingDirectory, testAssembly));
 
                 Task.WaitAll(taskSpawnIntel, taskSpawnNvidia, taskSpawnAmd);
+
+                Console.WriteLine($"Spawned #{taskSpawnIntel.Result} for Intel HD Graphics.");
+                Console.WriteLine($"Spawned #{taskSpawnNvidia.Result} for NVIDIA.");
+                Console.WriteLine($"Spawned #{taskSpawnAmd.Result} for AMD.");
 
                 var taskIntel = Task.Run(() => WaitForTestRunToComplete(taskSpawnIntel.Result, "Intel", Settings.Default.UvTestRunnerUrlIntel,
                     agentWorkingDirectory, buildWorkingDirectory, Settings.Default.InputNameIntel, Settings.Default.OutputNameIntel));
@@ -116,7 +122,6 @@ namespace UvTestRunnerClient
 
             using (var client = new HttpClient())
             {
-                client.Timeout = TimeSpan.FromMinutes(15);
                 client.BaseAddress = new Uri(testRunnerUrl);
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
@@ -148,7 +153,6 @@ namespace UvTestRunnerClient
         {
             using (var client = new HttpClient())
             {
-                client.Timeout = TimeSpan.FromMinutes(15);
                 client.BaseAddress = new Uri(testRunnerUrl);
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
