@@ -82,18 +82,36 @@ namespace UvTestRunner.Services
         {
             if (testRun == null)
                 throw new ArgumentNullException("testRun");
-
+            
             var id = testRun.ID;
             var workingDirectory = testRun.WorkingDirectory;
 
             // Start by spawning the test runner process and running the unit test suite.
-            UpdateTestRunStatus(id, TestRunStatus.Running);
-            var psi = new ProcessStartInfo(Settings.Default.TestHostExecutable, String.Format(Settings.Default.TestHostArgs, testRun.TestAssembly ?? "Ultraviolet.Tests.dll"))
+            var proc = default(Process);
+            var previousWorkingDirectory = Environment.CurrentDirectory;
+            try
             {
-                WorkingDirectory = Path.Combine(Settings.Default.TestRootDirectory, workingDirectory).Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
-            };
-            var proc = Process.Start(psi);
-            proc.WaitForExit();
+                Environment.CurrentDirectory = Path.Combine(Settings.Default.TestRootDirectory, workingDirectory).Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+                
+                UpdateTestRunStatus(id, TestRunStatus.Running);
+                var psi = new ProcessStartInfo(Settings.Default.TestHostExecutable, String.Format(Settings.Default.TestHostArgs, testRun.TestAssembly ?? "Ultraviolet.Tests.dll"))
+                {
+                    WorkingDirectory = Environment.CurrentDirectory
+                };
+                proc = Process.Start(psi);
+                proc.WaitForExit();
+            }
+            catch (IOException e)
+            {
+                UpdateTestRunStatus(id, TestRunStatus.Failed);
+                ProgramUI.QueueMessage("ERROR: Unable to spawn unit test process!");
+                ProgramUI.QueueMessage("ERROR: " + e.Message + Environment.NewLine);
+                return id;
+            }
+            finally
+            {
+                Environment.CurrentDirectory = previousWorkingDirectory;
+            }
 
             // If the test runner exited with an error, log it to the database and bail out.
             var testFramework = (Settings.Default.TestFramework ?? "mstest").ToLowerInvariant();
@@ -106,7 +124,7 @@ namespace UvTestRunner.Services
                 UpdateTestRunStatus(id, TestRunStatus.Failed);
                 return id;
             }
-
+            
             // Determine the location of the test result file...
             var testResultsRoot = Path.Combine(Settings.Default.TestRootDirectory, workingDirectory, Settings.Default.TestOutputDirectory);
             var testResultPath = String.Empty;
@@ -147,9 +165,10 @@ namespace UvTestRunner.Services
             catch (DirectoryNotFoundException)
             {
                 UpdateTestRunStatus(id, TestRunStatus.Failed);
+                ProgramUI.QueueMessage("ERROR: Unable to retrieve test artifacts. Directory not found.");
                 return id;
             }
-
+            
             // Optionally rewrite test names.
             if (!String.IsNullOrEmpty(Settings.Default.TestNameRewriteRule))
             {
@@ -166,24 +185,33 @@ namespace UvTestRunner.Services
             }
 
             // Create a directory to hold this test's artifacts.
-            var outputDirectory = Path.Combine(Settings.Default.TestResultDirectory, workingDirectory, id.ToString());
-            Directory.CreateDirectory(outputDirectory);
-
-            // Copy the result file and any outputted PNG files to the artifact directory.
-            var resultFileSrc = testResultPath;
-            var resultFileDst = Path.Combine(outputDirectory, Settings.Default.TestResultFile);
-            CopyFile(resultFileSrc, resultFileDst);
-
-            var pngFiles = Directory.GetFiles(testResultImagesPath, "*.png");
-            foreach (var pngFile in pngFiles)
+            try
             {
-                var pngFileSrc = pngFile;
-                var pngFileDst = Path.Combine(outputDirectory, Path.GetFileName(pngFileSrc));
-                CopyFile(pngFileSrc, pngFileDst);
-            }
+                var outputDirectory = Path.Combine(Settings.Default.TestResultDirectory, workingDirectory, id.ToString());
+                Directory.CreateDirectory(outputDirectory);
 
-            var resultStatus = GetStatusFromTestResult(resultFileSrc);
-            UpdateTestRunStatus(id, resultStatus);
+                // Copy the result file and any outputted PNG files to the artifact directory.
+                var resultFileSrc = testResultPath;
+                var resultFileDst = Path.Combine(outputDirectory, Settings.Default.TestResultFile);
+                CopyFile(resultFileSrc, resultFileDst);
+
+                var pngFiles = Directory.GetFiles(testResultImagesPath, "*.png");
+                foreach (var pngFile in pngFiles)
+                {
+                    var pngFileSrc = pngFile;
+                    var pngFileDst = Path.Combine(outputDirectory, Path.GetFileName(pngFileSrc));
+                    CopyFile(pngFileSrc, pngFileDst);
+                }
+
+                var resultStatus = GetStatusFromTestResult(resultFileSrc);
+                UpdateTestRunStatus(id, resultStatus);
+            }
+            catch (DirectoryNotFoundException)
+            {
+                UpdateTestRunStatus(id, TestRunStatus.Failed);
+                ProgramUI.QueueMessage("ERROR: Unable to store test artifacts. Directory not found.");
+                return id;
+            }
 
             return id;
         }
