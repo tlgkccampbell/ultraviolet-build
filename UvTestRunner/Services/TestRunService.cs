@@ -99,6 +99,7 @@ namespace UvTestRunner.Services
                     WorkingDirectory = Environment.CurrentDirectory
                 };
                 proc = Process.Start(psi);
+                proc.PriorityClass = ProcessPriorityClass.High;
                 proc.WaitForExit();
             }
             catch (IOException e)
