@@ -55,9 +55,9 @@ namespace UvDocs
 				select addin).SingleOrDefault();
 
 			xamlAttachedMembersAddInElement.ReplaceNodes(
-				new XElement("dependencyPropertyTypeName", "TwistedLogik.Ultraviolet.UI.Presentation.DependencyProperty"),
+				new XElement("dependencyPropertyTypeName", "Ultraviolet.Presentation.DependencyProperty"),
 				new XElement("dependencyPropertySuffix", "Property"),
-				new XElement("routedEventTypeName", "TwistedLogik.Ultraviolet.UI.Presentation.RoutedEvent"),
+				new XElement("routedEventTypeName", "Ultraviolet.Presentation.RoutedEvent"),
 				new XElement("routedEventSuffix", "Event"));
 
 			mrefConfig.Save(mrefConfigPath);
