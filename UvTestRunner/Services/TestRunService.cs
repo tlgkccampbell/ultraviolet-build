@@ -364,7 +364,7 @@ namespace UvTestRunner.Services
         /// </summary>
         private Boolean GetTestResults_NUnit3Core(Int64 id, String testResultsRoot, out String testResultPath, out String testResultImagesPath)
         {
-            testResultPath = Path.Combine(testResultsRoot, "TestResults", "results.trx");
+            testResultPath = Path.Combine(testResultsRoot, "TestResults", Settings.Default.TestResultFile);
             testResultImagesPath = Path.Combine(testResultsRoot, GetSanitizedMachineName());
 
             return true;
