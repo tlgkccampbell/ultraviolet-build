@@ -22,14 +22,15 @@ namespace UvTestRunnerClient
             var agentWorkingDirectory = args[0];
             var buildWorkingDirectory = args[1];
             var testAssembly = args[2];
+            var testFramework = args.Length > 3 ? args[3] : "nunit3";
 
             Console.WriteLine("Spawning test runs.");
 
             var succeeded = Task.Run(() =>
             {
-                var taskSpawnIntel = Task.Run(() => SpawnNewTestRun(Settings.Default.UvTestRunnerUrlIntel, agentWorkingDirectory, buildWorkingDirectory, testAssembly));
-                var taskSpawnNvidia = Task.Run(() => SpawnNewTestRun(Settings.Default.UvTestRunnerUrlNvidia, agentWorkingDirectory, buildWorkingDirectory, testAssembly));
-                var taskSpawnAmd = Task.Run(() => SpawnNewTestRun(Settings.Default.UvTestRunnerUrlAmd, agentWorkingDirectory, buildWorkingDirectory, testAssembly));
+                var taskSpawnIntel = Task.Run(() => SpawnNewTestRun(Settings.Default.UvTestRunnerUrlIntel, agentWorkingDirectory, buildWorkingDirectory, testAssembly, testFramework));
+                var taskSpawnNvidia = Task.Run(() => SpawnNewTestRun(Settings.Default.UvTestRunnerUrlNvidia, agentWorkingDirectory, buildWorkingDirectory, testAssembly, testFramework));
+                var taskSpawnAmd = Task.Run(() => SpawnNewTestRun(Settings.Default.UvTestRunnerUrlAmd, agentWorkingDirectory, buildWorkingDirectory, testAssembly, testFramework));
 
                 Task.WaitAll(taskSpawnIntel, taskSpawnNvidia, taskSpawnAmd);
 
@@ -114,8 +115,9 @@ namespace UvTestRunnerClient
         /// <param name="agentWorkingDirectory">The working directory for the current build agent.</param>
         /// <param name="buildWorkingDirectory">The working directory for the current build.</param>
         /// <param name="testAssembly">The name of the assembly which contains the tests.</param>
+        /// <param name="testFramework">The name of the test framework with which to run the tests.</param>
         /// <returns>The identifier of the test run within the server's database.</returns>
-        private static async Task<Int64?> SpawnNewTestRun(String testRunnerUrl, String agentWorkingDirectory, String buildWorkingDirectory, String testAssembly)
+        private static async Task<Int64?> SpawnNewTestRun(String testRunnerUrl, String agentWorkingDirectory, String buildWorkingDirectory, String testAssembly, String testFramework)
         {
             if (String.IsNullOrEmpty(testRunnerUrl))
                 return null;
@@ -130,7 +132,7 @@ namespace UvTestRunnerClient
                     new Uri(AddTrailingSlashToPath(agentWorkingDirectory)).MakeRelativeUri(
                     new Uri(AddTrailingSlashToPath(buildWorkingDirectory)));
                 
-                var response = await client.PostAsync("Api/UvTest", new StringContent($"\"{testAssembly},{dirRelative}\"", Encoding.UTF8, "application/json"));
+                var response = await client.PostAsync("Api/UvTest", new StringContent($"\"{testAssembly},{dirRelative},{testFramework}\"", Encoding.UTF8, "application/json"));
                 if (!response.IsSuccessStatusCode)
                 {
                     Console.WriteLine("Failed to POST to test server at {0}: {1} {2}.", testRunnerUrl, (Int32)response.StatusCode, response.ReasonPhrase);
