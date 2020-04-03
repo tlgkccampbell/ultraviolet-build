@@ -47,5 +47,11 @@
     <Setting Name="TestNameRewriteRule" Type="System.String" Scope="Application">
       <Value Profile="(Default)" />
     </Setting>
+    <Setting Name="NetCoreHostExecutable" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">dotnet</Value>
+    </Setting>
+    <Setting Name="NetCoreHostArgs" Type="System.String" Scope="Application">
+      <Value Profile="(Default)" />
+    </Setting>
   </Settings>
 </SettingsFile>

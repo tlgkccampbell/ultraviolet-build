@@ -11,13 +11,14 @@ namespace UvTestRunner.Controllers
         public IHttpActionResult Post([FromBody] String metadata)
         {
             var metadataParts = metadata?.Split(',');
-            if (metadataParts?.Length != 2)
+            if (metadataParts?.Length < 2 || metadataParts?.Length > 3)
                 return BadRequest("Invalid request metadata.");
 
             var testAssembly = metadataParts[0];
             var workingDirectory = metadataParts[1];
+            var testFramework = metadataParts.Length > 2 ? metadataParts[2] : null;
 
-            var testRunID = TestRunQueueService.Instance.Create(workingDirectory, testAssembly);
+            var testRunID = TestRunQueueService.Instance.Create(workingDirectory, testAssembly, testFramework);
             return Ok(new TestRunCreationResponse() { TestRunID = testRunID });
         }
 

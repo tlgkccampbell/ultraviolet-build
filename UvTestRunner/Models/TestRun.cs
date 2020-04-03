@@ -10,5 +10,6 @@ namespace UvTestRunner.Models
         public TestRunStatus Status { get; set; }
         public String WorkingDirectory { get; set; }
         public String TestAssembly { get; set; }
+        public String TestFramework { get; set; }
     }
 }

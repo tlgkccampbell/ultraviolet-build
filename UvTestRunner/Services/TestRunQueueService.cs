@@ -18,10 +18,11 @@ namespace UvTestRunner.Services
         /// </summary>
         /// <param name="workingDirectory">The current working directory for the build agent.</param>
         /// <param name="testAssembly">The name of the assembly that contains the tests.</param>
+        /// <param name="testFramework">The name of the test framework with which to execute the tests.</param>
         /// <returns>The identifier of the test run within the database.</returns>
-        public Int64 Create(String workingDirectory, String testAssembly)
+        public Int64 Create(String workingDirectory, String testAssembly, String testFramework)
         {
-            var id = testRunnerService.CreateTestRun(workingDirectory, testAssembly);
+            var id = testRunnerService.CreateTestRun(workingDirectory, testAssembly, testFramework);
             Enqueue(id, workingDirectory);
             return id;
         }

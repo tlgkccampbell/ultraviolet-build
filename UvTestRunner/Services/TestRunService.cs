@@ -85,6 +85,7 @@ namespace UvTestRunner.Services
             
             var id = testRun.ID;
             var workingDirectory = testRun.WorkingDirectory;
+            var testFramework = (testRun.TestFramework ?? Settings.Default.TestFramework ?? "mstest").ToLowerInvariant();
 
             // Start by spawning the test runner process and running the unit test suite.
             var proc = default(Process);
@@ -94,13 +95,17 @@ namespace UvTestRunner.Services
                 Environment.CurrentDirectory = Path.Combine(Settings.Default.TestRootDirectory, workingDirectory).Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
                 
                 UpdateTestRunStatus(id, TestRunStatus.Running);
-                var psi = new ProcessStartInfo(Settings.Default.TestHostExecutable, String.Format(Settings.Default.TestHostArgs, testRun.TestAssembly ?? "Ultraviolet.Tests.dll"))
+                switch (testFramework)
                 {
-                    WorkingDirectory = Environment.CurrentDirectory
-                };
-                proc = Process.Start(psi);
-                proc.PriorityClass = ProcessPriorityClass.High;
-                proc.WaitForExit();
+                    case "mstest":
+                    case "nunit3":
+                        RunTests_Legacy(testRun, out proc);
+                        break;
+
+                    case "nunit3core":
+                        RunTests_NUnit3Core(testRun, out proc);
+                        break;
+                }
             }
             catch (IOException e)
             {
@@ -115,7 +120,6 @@ namespace UvTestRunner.Services
             }
 
             // If the test runner exited with an error, log it to the database and bail out.
-            var testFramework = (Settings.Default.TestFramework ?? "mstest").ToLowerInvariant();
             var testFrameworkFailed = (testFramework == "mstest") ?
                 (proc.ExitCode != 0 && proc.ExitCode != 1) :
                 (proc.ExitCode < 0);
@@ -135,32 +139,24 @@ namespace UvTestRunner.Services
              * TODO: The way we do this currently introduces a race condition if the test suite is being run simultaneously
              * in multiple threads, which shouldn't realistically happen, but this case probably
              * ought to be handled anyway for robustness. */
-            DirectoryInfo relevantTestResult;
             try
             {
-                if (testFramework == "mstest")
+                switch (testFramework)
                 {
-                    var testResultsDirs = Directory.GetDirectories(testResultsRoot)
-                        .Where(x => x.Contains("_" + Environment.MachineName.ToUpper() + " "))
-                        .Select(x => new DirectoryInfo(x));
+                    case "mstest":
+                        if (!GetTestResults_MSTest(id, testResultsRoot, out testResultPath, out testResultImagesPath))
+                            return id;
+                        break;
 
-                    relevantTestResult = testResultsDirs.OrderByDescending(x => x.CreationTimeUtc).FirstOrDefault();
+                    case "nunit3":
+                        if (!GetTestResults_NUnit3(id, testResultsRoot, out testResultPath, out testResultImagesPath))
+                            return id;
+                        break;
 
-                    if (relevantTestResult == null)
-                    {
-                        UpdateTestRunStatus(id, TestRunStatus.Failed);
-                        return id;
-                    }
-
-                    testResultPath = Path.ChangeExtension(Path.Combine(relevantTestResult.Parent.FullName, relevantTestResult.Name), "trx");
-                    testResultImagesPath = Path.Combine(relevantTestResult.FullName, "Out");
-                }
-                else
-                {
-                    relevantTestResult = new DirectoryInfo(testResultsRoot);
-
-                    testResultPath = Path.Combine(testResultsRoot, Settings.Default.TestResultFile);
-                    testResultImagesPath = Path.Combine(testResultsRoot, GetSanitizedMachineName());
+                    case "nunit3core":
+                        if (!GetTestResults_NUnit3Core(id, testResultsRoot, out testResultPath, out testResultImagesPath))
+                            return id;
+                        break;
                 }
             }
             catch (DirectoryNotFoundException)
@@ -181,6 +177,10 @@ namespace UvTestRunner.Services
 
                     case "nunit3":
                         RewriteTestNames_NUnit3(testResultPath);
+                        break;
+
+                    case "nunit3core":
+                        RewriteTestNames_NUnit3Core(testResultPath);
                         break;
                 }
             }
@@ -222,12 +222,13 @@ namespace UvTestRunner.Services
         /// </summary>
         /// <param name="workingDirectory">The current working directory for the build agent.</param>
         /// <param name="testAssembly">The name of the assembly that contains the tests.</param>
+        /// <param name="testFramework">The name of the test framework with which to execute the tests.</param>
         /// <returns>The identifier of the test run within the database.</returns>
-        public Int64 CreateTestRun(String workingDirectory, String testAssembly)
+        public Int64 CreateTestRun(String workingDirectory, String testAssembly, String testFramework)
         {
             using (var testRunContext = new TestRunContext())
             {
-                var run = new TestRun() { Status = TestRunStatus.Pending, WorkingDirectory = workingDirectory, TestAssembly = testAssembly };
+                var run = new TestRun() { Status = TestRunStatus.Pending, WorkingDirectory = workingDirectory, TestAssembly = testAssembly, TestFramework = testFramework };
 
                 testRunContext.TestRuns.Add(run);
                 testRunContext.SaveChanges();
@@ -324,6 +325,52 @@ namespace UvTestRunner.Services
         }
 
         /// <summary>
+        /// Retrieves the results of the specified test run.
+        /// </summary>
+        private Boolean GetTestResults_MSTest(Int64 id, String testResultsRoot, out String testResultPath, out String testResultImagesPath)
+        {
+            var testResultsDirs = Directory.GetDirectories(testResultsRoot)
+                .Where(x => x.Contains("_" + Environment.MachineName.ToUpper() + " "))
+                .Select(x => new DirectoryInfo(x));
+
+            var relevantTestResult = testResultsDirs.OrderByDescending(x => x.CreationTimeUtc).FirstOrDefault();
+
+            if (relevantTestResult == null)
+            {
+                UpdateTestRunStatus(id, TestRunStatus.Failed);
+                testResultPath = null;
+                testResultImagesPath = null;
+                return false;
+            }
+
+            testResultPath = Path.ChangeExtension(Path.Combine(relevantTestResult.Parent.FullName, relevantTestResult.Name), "trx");
+            testResultImagesPath = Path.Combine(relevantTestResult.FullName, "Out");
+            return true;
+        }
+
+        /// <summary>
+        /// Retrieves the results of the specified test run.
+        /// </summary>
+        private Boolean GetTestResults_NUnit3(Int64 id, String testResultsRoot, out String testResultPath, out String testResultImagesPath)
+        {
+            testResultPath = Path.Combine(testResultsRoot, Settings.Default.TestResultFile);
+            testResultImagesPath = Path.Combine(testResultsRoot, GetSanitizedMachineName());
+
+            return true;
+        }
+
+        /// <summary>
+        /// Retrieves the results of the specified test run.
+        /// </summary>
+        private Boolean GetTestResults_NUnit3Core(Int64 id, String testResultsRoot, out String testResultPath, out String testResultImagesPath)
+        {
+            testResultPath = Path.Combine(testResultsRoot, "TestResults", "results.trx");
+            testResultImagesPath = Path.Combine(testResultsRoot, GetSanitizedMachineName());
+
+            return true;
+        }
+
+        /// <summary>
         /// Rewrites the names found in the specified results file based on the current rewrite rule.
         /// </summary>
         private void RewriteTestNames_MSTest(String path)
@@ -349,6 +396,54 @@ namespace UvTestRunner.Services
             }
 
             testResultXml.Save(path);
+        }
+
+        /// <summary>
+        /// Rewrites the names found in the specified results file based on the current rewrite rule.
+        /// </summary>
+        private void RewriteTestNames_NUnit3Core(String path)
+        {
+            var testResultXml = XDocument.Load(path);
+            var testResultNamespace = testResultXml.Root.GetDefaultNamespace();
+
+            var tests = testResultXml.Root.Descendants(testResultNamespace + "UnitTestResult");
+
+            foreach (var test in tests)
+            {
+                var name = (String)test.Attribute("testName");
+                name = String.Format(Settings.Default.TestNameRewriteRule, name);
+                test.SetAttributeValue("testName", name);
+            }
+
+            testResultXml.Save(path);
+        }
+
+        /// <summary>
+        /// Runs tests using a legacy framework.
+        /// </summary>
+        private void RunTests_Legacy(TestRun testRun, out Process proc)
+        {
+            var psi = new ProcessStartInfo(Settings.Default.TestHostExecutable, String.Format(Settings.Default.TestHostArgs, testRun.TestAssembly ?? "Ultraviolet.Tests.dll"))
+            {
+                WorkingDirectory = Environment.CurrentDirectory
+            };
+            proc = Process.Start(psi);
+            proc.PriorityClass = ProcessPriorityClass.High;
+            proc.WaitForExit();
+        }
+
+        /// <summary>
+        /// Runs NUnit3 runs for a .NET Core project.
+        /// </summary>
+        private void RunTests_NUnit3Core(TestRun testRun, out Process proc)
+        {
+            var psi = new ProcessStartInfo(Settings.Default.NetCoreHostExecutable, $"test {String.Format(Settings.Default.NetCoreHostArgs, testRun.TestAssembly ?? "Ultraviolet.Tests.dll")}")
+            {
+                WorkingDirectory = Environment.CurrentDirectory
+            };
+            proc = Process.Start(psi);
+            proc.PriorityClass = ProcessPriorityClass.High;
+            proc.WaitForExit();
         }
     }
 }
