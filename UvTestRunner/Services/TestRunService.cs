@@ -175,11 +175,8 @@ namespace UvTestRunner.Services
                         break;
 
                     case "nunit3":
-                        RewriteTestNames_NUnit3(testResultPath);
-                        break;
-
                     case "nunit3core":
-                        RewriteTestNames_NUnit3Core(testResultPath);
+                        RewriteTestNames_NUnit3(testResultPath);
                         break;
                 }
             }
@@ -387,33 +384,6 @@ namespace UvTestRunner.Services
 
             var tests = testResultXml.Root.Descendants(testResultNamespace + "test-case");
 
-            foreach (var test in tests)
-            {
-                var name = (String)test.Attribute("name");
-                name = String.Format(Settings.Default.TestNameRewriteRule, name);
-                test.SetAttributeValue("name", name);
-            }
-
-            testResultXml.Save(path);
-        }
-
-        /// <summary>
-        /// Rewrites the names found in the specified results file based on the current rewrite rule.
-        /// </summary>
-        private void RewriteTestNames_NUnit3Core(String path)
-        {
-            var testResultXml = XDocument.Load(path);
-            var testResultNamespace = testResultXml.Root.GetDefaultNamespace();
-
-            var testsResults = testResultXml.Root.Descendants(testResultNamespace + "UnitTestResult");
-            foreach (var testResult in testsResults)
-            {
-                var name = (String)testResult.Attribute("testName");
-                name = String.Format(Settings.Default.TestNameRewriteRule, name);
-                testResult.SetAttributeValue("testName", name);
-            }
-
-            var tests = testResultXml.Root.Descendants(testResultNamespace + "UnitTest");
             foreach (var test in tests)
             {
                 var name = (String)test.Attribute("name");

@@ -224,10 +224,8 @@ namespace UvTestViewer.Services
                     return RetrieveCachedTestInfo_MSTest(dir, cacheFilename, serializer);
 
                 case "nunit3":
-                    return RetrieveCachedTestInfo_NUnit3(dir, cacheFilename, serializer);
-
                 case "nunit3core":
-                    return RetrieveCachedTestInfo_NUnit3Core(dir, cacheFilename, serializer);
+                    return RetrieveCachedTestInfo_NUnit3(dir, cacheFilename, serializer);
 
                 default:
                     throw new NotSupportedException("Unsupported test framework");
@@ -312,53 +310,6 @@ namespace UvTestViewer.Services
                      select new CachedTestInfo
                      {
                          Name = GetNUnitTestName(name),
-                         Description = desc,
-                         Status = status,
-                     }).ToList();
-
-                using (var stream = File.OpenWrite(cacheFilename))
-                {
-                    serializer.Serialize(stream, cachedTestInfos);
-                }
-
-                return cachedTestInfos;
-            }
-            catch (IOException)
-            {
-                return Enumerable.Empty<CachedTestInfo>();
-            }
-        }
-
-        /// <summary>
-        /// Retrieves cached test info for the NUnit3 framework on .NET Core.
-        /// </summary>
-        private static IEnumerable<CachedTestInfo> RetrieveCachedTestInfo_NUnit3Core(DirectoryInfo dir, String cacheFilename, XmlSerializer serializer)
-        {
-            try
-            {
-                var testResultFilename = dir.GetFiles("*.trx").SingleOrDefault()?.FullName;
-                var testResultXml = XDocument.Load(testResultFilename);
-                var testResultNamespace = testResultXml.Root.GetDefaultNamespace();
-
-                var unitTests = testResultXml.Root.Descendants(testResultNamespace + "UnitTest");
-                var unitTestResults = testResultXml.Root.Descendants(testResultNamespace + "UnitTestResult");
-
-                var failedTestNames = new HashSet<String>
-                    (from r in unitTestResults
-                     let testName = (String)r.Attribute("testName")
-                     let outcome = (String)r.Attribute("outcome")
-                     where
-                         outcome == "Failed"
-                     select testName);
-
-                var cachedTestInfos =
-                    (from node in unitTests
-                     let name = (String)node.Attribute("name")
-                     let desc = (String)node.Element(testResultNamespace + "Description")
-                     let status = failedTestNames.Contains(name) ? CachedTestInfoStatus.Failed : CachedTestInfoStatus.Succeeded
-                     select new CachedTestInfo
-                     {
-                         Name = name,
                          Description = desc,
                          Status = status,
                      }).ToList();
