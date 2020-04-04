@@ -24,7 +24,7 @@ namespace UvTestRunnerClient
             var testAssembly = args[2];
             var testFramework = args.Length > 3 ? args[3] : "nunit3";
 
-            var isNetCore = String.Equals(testFramework, "nunit3netcore", StringComparison.Ordinal);
+            var isNetCore = String.Equals(testFramework, "nunit3core", StringComparison.Ordinal);
 
             var inputNameIntel = isNetCore ? Settings.Default.NetCoreInputNameIntel : Settings.Default.InputNameIntel;
             var inputNameNvidia = isNetCore ? Settings.Default.NetCoreInputNameNvidia : Settings.Default.InputNameNvidia;
@@ -208,7 +208,7 @@ namespace UvTestRunnerClient
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    Console.WriteLine("Failed to retrieve {0} test results: {1} {2}.", vendor, (Int32)response.StatusCode, response.ReasonPhrase);
+                    Console.WriteLine("Failed to retrieve {0} test results ({1}): {2} {3}.", vendor, inputName, (Int32)response.StatusCode, response.ReasonPhrase);
 
                     var error = await response.Content.ReadAsStringAsync();
                     File.WriteAllText(String.Format("Error_{0}_{1:yyyy_MM_dd_HH_mm_ss}.html", vendor, DateTime.Now), error);
