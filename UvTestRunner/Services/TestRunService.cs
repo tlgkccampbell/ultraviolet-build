@@ -86,6 +86,7 @@ namespace UvTestRunner.Services
             var id = testRun.ID;
             var workingDirectory = testRun.WorkingDirectory;
             var testFramework = (testRun.TestFramework ?? Settings.Default.TestFramework ?? "mstest").ToLowerInvariant();
+            var testSuffix = testRun.Suffix ?? String.Empty;
 
             // Start by spawning the test runner process and running the unit test suite.
             var proc = default(Process);
@@ -103,7 +104,7 @@ namespace UvTestRunner.Services
                         break;
 
                     case "nunit3core":
-                        RunTests_NUnit3Core(testRun, out proc);
+                        RunTests_NUnit3Core(testRun, testSuffix, out proc);
                         break;
                 }
             }
@@ -153,7 +154,7 @@ namespace UvTestRunner.Services
                         break;
 
                     case "nunit3core":
-                        if (!GetTestResults_NUnit3Core(id, testResultsRoot, out testResultPath, out testResultImagesPath))
+                        if (!GetTestResults_NUnit3Core(id, testResultsRoot, testSuffix, out testResultPath, out testResultImagesPath))
                             return id;
                         break;
                 }
@@ -359,9 +360,9 @@ namespace UvTestRunner.Services
         /// <summary>
         /// Retrieves the results of the specified test run.
         /// </summary>
-        private Boolean GetTestResults_NUnit3Core(Int64 id, String testResultsRoot, out String testResultPath, out String testResultImagesPath)
+        private Boolean GetTestResults_NUnit3Core(Int64 id, String testResultsRoot, String testSuffix, out String testResultPath, out String testResultImagesPath)
         {
-            testResultPath = Path.Combine(testResultsRoot, Settings.Default.NetCoreTestResultFile);
+            testResultPath = Path.Combine(testResultsRoot, String.Format(Settings.Default.NetCoreTestResultFile, testSuffix));
             testResultImagesPath = Path.Combine(testResultsRoot, GetSanitizedMachineName());
 
             return true;
@@ -412,9 +413,9 @@ namespace UvTestRunner.Services
         /// <summary>
         /// Runs NUnit3 runs for a .NET Core project.
         /// </summary>
-        private void RunTests_NUnit3Core(TestRun testRun, out Process proc)
+        private void RunTests_NUnit3Core(TestRun testRun, String testSuffix, out Process proc)
         {
-            var psi = new ProcessStartInfo(Settings.Default.NetCoreHostExecutable, $"test {String.Format(Settings.Default.NetCoreHostArgs, testRun.TestAssembly ?? "Ultraviolet.Tests.dll")}")
+            var psi = new ProcessStartInfo(Settings.Default.NetCoreHostExecutable, $"test {String.Format(Settings.Default.NetCoreHostArgs, testRun.TestAssembly ?? "Ultraviolet.Tests.dll", testSuffix)}")
             {
                 WorkingDirectory = Environment.CurrentDirectory
             };
