@@ -194,7 +194,7 @@ namespace UvTestRunner.Services
 
                 // Copy the result file and any outputted PNG files to the artifact directory.
                 var resultFileSrc = testResultPath;
-                var resultFileDst = Path.Combine(outputDirectory, Settings.Default.TestResultFile);
+                var resultFileDst = Path.Combine(outputDirectory, Path.GetFileName(testResultPath));
                 CopyFile(resultFileSrc, resultFileDst);
 
                 var pngFiles = Directory.GetFiles(testResultImagesPath, "*.png");
@@ -365,7 +365,7 @@ namespace UvTestRunner.Services
         /// </summary>
         private Boolean GetTestResults_NUnit3Core(Int64 id, String testResultsRoot, out String testResultPath, out String testResultImagesPath)
         {
-            testResultPath = Path.Combine(testResultsRoot, "TestResults", Settings.Default.TestResultFile);
+            testResultPath = Path.Combine(testResultsRoot, "TestResults", Settings.Default.NetCoreTestResultFile);
             testResultImagesPath = Path.Combine(testResultsRoot, GetSanitizedMachineName());
 
             return true;

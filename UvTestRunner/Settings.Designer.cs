@@ -175,5 +175,14 @@ namespace UvTestRunner {
                 return ((string)(this["NetCoreHostArgs"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string NetCoreTestResultFile {
+            get {
+                return ((string)(this["NetCoreTestResultFile"]));
+            }
+        }
     }
 }
