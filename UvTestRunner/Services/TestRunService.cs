@@ -214,14 +214,14 @@ namespace UvTestRunner.Services
                     var resultStatus = GetStatusFromTestResult(testResultPath);
                     var resultFileSrc = testResultPath;
                     var resultFileDst = Path.Combine(outputDirectory, Path.GetFileName(testResultPath));
-                    MoveFile(resultFileSrc, resultFileDst);
+                    CopyFile(resultFileSrc, resultFileDst, false);
 
                     var pngFiles = Directory.GetFiles(testResultImagesPath, "*.png");
                     foreach (var pngFile in pngFiles)
                     {
                         var pngFileSrc = pngFile;
                         var pngFileDst = Path.Combine(outputDirectory, Path.GetFileName(pngFileSrc));
-                        MoveFile(pngFileSrc, pngFileDst);
+                        CopyFile(pngFileSrc, pngFileDst, true);
                     }
 
                     // Update test status if the test failed.
@@ -298,11 +298,12 @@ namespace UvTestRunner.Services
         }
         
         /// <summary>
-        /// Moves a file and does not return until moving is complete.
+        /// Copies a file and does not return until copying is complete.
         /// </summary>
         /// <param name="src">The source file.</param>
         /// <param name="dst">The destination file.</param>
-        private void MoveFile(String src, String dst)
+        /// <param name="delete">A value indicating whether to delete the source file after copying.</param>
+        private void CopyFile(String src, String dst, Boolean delete)
         {
             using (var srcStream = File.Open(src, FileMode.Open))
             {
@@ -311,7 +312,9 @@ namespace UvTestRunner.Services
                     srcStream.CopyTo(dstStream);
                 }
             }
-            File.Delete(src);
+
+            if (delete)
+                File.Delete(src);
         }
 
         /// <summary>
