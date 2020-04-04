@@ -112,8 +112,13 @@ namespace UvTestRunnerClient
                 var splitSuffixes = (suffixes ?? String.Empty).Split(';');
                 for (int i = 0; i < splitSuffixes.Length; i++)
                 {
-                    var resultSuffix = splitSuffixes[i];
-                    var resultData = await RetrieveTestResult(vendor, agentWorkingDirectory, buildWorkingDirectory, inputName, idValue, resultSuffix);
+                    var suffix = splitSuffixes[i];
+
+                    var outputNameExtension = Path.GetExtension(outputName);
+                    var outputNameWithoutExtension = Path.GetFileNameWithoutExtension(outputName);
+                    outputName = $"{outputNameWithoutExtension}{suffix}{outputNameExtension}";
+
+                    var resultData = await RetrieveTestResult(vendor, agentWorkingDirectory, buildWorkingDirectory, inputName, idValue, suffix);
                     var resultPath = Path.Combine(buildWorkingDirectory, outputName);
                     File.WriteAllBytes(resultPath, resultData);
                 }
