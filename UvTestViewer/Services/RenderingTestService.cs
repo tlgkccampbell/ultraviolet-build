@@ -26,12 +26,11 @@ namespace UvTestViewer.Services
         /// <returns>A <see cref="RenderingTestOverview"/> instance which represents the msot recent test run.</returns>
         public RenderingTestOverview GetMostRecentRenderingTestOverview(GpuVendor vendor, String planKey, String branchKey, Int32 page, Int32 pageSize)
         {
-            var id        = 0L;
-            var directory = GetMostRecentTestResultsDirectory(vendor, planKey, branchKey, out id);
+            var directory = GetMostRecentTestResultsDirectory(vendor, planKey, branchKey, out var id, out var pattern, out var framework);
             if (directory == null)
                 return null;
 
-            var cachedTestInfos = RetrieveCachedTestInfo(directory);
+            var cachedTestInfos = RetrieveCachedTestInfo(directory, framework);
 
             var images       = directory.GetFiles("*.png");
             var imagesByTest = from file in images
@@ -42,9 +41,7 @@ namespace UvTestViewer.Services
                                group filename by testname into g
                                select g;
 
-            var workingDirectoryPattern = ConfigurationManager.AppSettings["BambooWorkingDirectoryPattern"];
-            var workingDirectory = String.Format(workingDirectoryPattern, branchKey ?? planKey);
-
+            var workingDirectory = String.Format(pattern, branchKey ?? planKey);
             var outputDir = VirtualPathUtility.ToAbsolute(String.Format("~/TestResults/{0}/{1}/{2}", vendor, workingDirectory, id));
             
             var tests = new List<RenderingTest>();
@@ -109,8 +106,10 @@ namespace UvTestViewer.Services
         /// <param name="planKey">The Bamboo plan key for which to retrieve results.</param>
         /// <param name="branchKey">The Bamboo branch key for which to retrieve results.</param>
         /// <param name="id">The identifier of the test run associated with the retrieved directory.</param>
+        /// <param name="pattern">The working directory pattern which was used.</param>
+        /// <param name="framework">The test framework for this directory.</param>
         /// <returns>A <see cref="DirectoryInfo"/> which represents the most recent rendering test run.</returns>
-        private static DirectoryInfo GetMostRecentTestResultsDirectory(GpuVendor vendor, String planKey, String branchKey, out Int64 id)
+        private static DirectoryInfo GetMostRecentTestResultsDirectory(GpuVendor vendor, String planKey, String branchKey, out Int64 id, out String pattern, out String framework)
         {
             var root = ConfigurationManager.AppSettings["TestResultRootDirectory"];
             var rootMapped = Path.IsPathRooted(root) ? root : HttpContext.Current.Server.MapPath(root);
@@ -134,16 +133,16 @@ namespace UvTestViewer.Services
             }
 
             var workingDirectoryPatterns = ConfigurationManager.AppSettings["BambooWorkingDirectoryPattern"].Split(';');
-            foreach (var workingDirectoryPattern in workingDirectoryPatterns)
+            var workingDirectoryFrameworks = ConfigurationManager.AppSettings["BambooWorkingDirectoryFrameworks"].Split(';');
+            for (int i = 0; i < workingDirectoryPatterns.Length; i++)
             {
+                var workingDirectoryFramework = workingDirectoryFrameworks[i];
+                var workingDirectoryPattern = workingDirectoryPatterns[i];
                 var workingDirectory = String.Format(workingDirectoryPattern, branchKey ?? planKey);
                 var workingDirectoryWithRoot = Path.Combine(rootMapped, workingDirectory);
 
                 if (!Directory.Exists(workingDirectoryWithRoot))
-                {
-                    id = 0;
                     continue;
-                }
 
                 var rootSubdirs = Directory.GetDirectories(workingDirectoryWithRoot);
                 var rootSubdirsByID = from subdir in rootSubdirs
@@ -155,16 +154,17 @@ namespace UvTestViewer.Services
 
                 var directory = rootSubdirsByID.FirstOrDefault();
                 if (directory == null)
-                {
-                    id = 0;
                     continue;
-                }
 
                 id = directory.ID.Value;
+                pattern = workingDirectoryPattern;
+                framework = workingDirectoryFramework;
                 return directory.DirectoryInfo;
             }
 
             id = 0;
+            pattern = null;
+            framework = null;
             return null;
         }
 
@@ -203,7 +203,7 @@ namespace UvTestViewer.Services
         /// <summary>
         /// Retrieves the collection of <see cref="CachedTestInfo"/> objects which represent the tests in the specified directory.
         /// </summary>
-        private static IEnumerable<CachedTestInfo> RetrieveCachedTestInfo(DirectoryInfo dir)
+        private static IEnumerable<CachedTestInfo> RetrieveCachedTestInfo(DirectoryInfo dir, String framework)
         {
             var serializer = new XmlSerializer(typeof(List<CachedTestInfo>));
 
@@ -218,18 +218,68 @@ namespace UvTestViewer.Services
             }
             catch (IOException) { }
 
-            var testFramework = (ConfigurationManager.AppSettings["TestFramework"] ?? "mstest").ToLowerInvariant();
-            switch (testFramework)
+            switch (framework)
             {
+                case "mstest":
+                    return RetrieveCachedTestInfo_MSTest(dir, cacheFilename, serializer);
+
                 case "nunit3":
                     return RetrieveCachedTestInfo_NUnit3(dir, cacheFilename, serializer);
 
-                case "mstest":
-                    return RetrieveCachedTestInfo_MSTest(dir, cacheFilename, serializer);
+                case "nunit3core":
+                    return RetrieveCachedTestInfo_NUnit3Core(dir, cacheFilename, serializer);
 
                 default:
                     throw new NotSupportedException("Unsupported test framework");
             }            
+        }
+
+        /// <summary>
+        /// Retrieves cached test info for the MSTest framework.
+        /// </summary>
+        private static IEnumerable<CachedTestInfo> RetrieveCachedTestInfo_MSTest(DirectoryInfo dir, String cacheFilename, XmlSerializer serializer)
+        {
+            try
+            {
+                var testResultFilename = Path.Combine(dir.FullName, "Result.trx");
+                var testResultXml = XDocument.Load(testResultFilename);
+                var testResultNamespace = testResultXml.Root.GetDefaultNamespace();
+
+                var unitTests = testResultXml.Root.Descendants(testResultNamespace + "UnitTest")
+                    .Where(x => x.Descendants(testResultNamespace + "TestCategoryItem").Any(y => (String)y.Attribute("TestCategory") == "Rendering"));
+                var unitTestResults = testResultXml.Root.Descendants(testResultNamespace + "UnitTestResult");
+
+                var failedTestNames = new HashSet<String>
+                    (from r in unitTestResults
+                     let testName = (String)r.Attribute("testName")
+                     let outcome = (String)r.Attribute("outcome")
+                     where
+                         outcome == "Failed"
+                     select testName);
+
+                var cachedTestInfos =
+                    (from node in unitTests
+                     let name = (String)node.Attribute("name")
+                     let desc = (String)node.Element(testResultNamespace + "Description")
+                     let status = failedTestNames.Contains(name) ? CachedTestInfoStatus.Failed : CachedTestInfoStatus.Succeeded
+                     select new CachedTestInfo
+                     {
+                         Name = name,
+                         Description = desc,
+                         Status = status,
+                     }).ToList();
+
+                using (var stream = File.OpenWrite(cacheFilename))
+                {
+                    serializer.Serialize(stream, cachedTestInfos);
+                }
+
+                return cachedTestInfos;
+            }
+            catch (IOException)
+            {
+                return Enumerable.Empty<CachedTestInfo>();
+            }
         }
 
         /// <summary>
@@ -280,18 +330,17 @@ namespace UvTestViewer.Services
         }
 
         /// <summary>
-        /// Retrieves cached test info for the MSTest framework.
+        /// Retrieves cached test info for the NUnit3 framework on .NET Core.
         /// </summary>
-        private static IEnumerable<CachedTestInfo> RetrieveCachedTestInfo_MSTest(DirectoryInfo dir, String cacheFilename, XmlSerializer serializer)
+        private static IEnumerable<CachedTestInfo> RetrieveCachedTestInfo_NUnit3Core(DirectoryInfo dir, String cacheFilename, XmlSerializer serializer)
         {
             try
             {
-                var testResultFilename = Path.Combine(dir.FullName, "Result.trx");
+                var testResultFilename = dir.GetFiles("*.trx").SingleOrDefault()?.FullName;
                 var testResultXml = XDocument.Load(testResultFilename);
                 var testResultNamespace = testResultXml.Root.GetDefaultNamespace();
 
-                var unitTests = testResultXml.Root.Descendants(testResultNamespace + "UnitTest")
-                    .Where(x => x.Descendants(testResultNamespace + "TestCategoryItem").Any(y => (String)y.Attribute("TestCategory") == "Rendering"));
+                var unitTests = testResultXml.Root.Descendants(testResultNamespace + "UnitTest");
                 var unitTestResults = testResultXml.Root.Descendants(testResultNamespace + "UnitTestResult");
 
                 var failedTestNames = new HashSet<String>

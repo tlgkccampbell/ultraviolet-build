@@ -405,13 +405,20 @@ namespace UvTestRunner.Services
             var testResultXml = XDocument.Load(path);
             var testResultNamespace = testResultXml.Root.GetDefaultNamespace();
 
-            var tests = testResultXml.Root.Descendants(testResultNamespace + "UnitTestResult");
+            var testsResults = testResultXml.Root.Descendants(testResultNamespace + "UnitTestResult");
+            foreach (var testResult in testsResults)
+            {
+                var name = (String)testResult.Attribute("testName");
+                name = String.Format(Settings.Default.TestNameRewriteRule, name);
+                testResult.SetAttributeValue("testName", name);
+            }
 
+            var tests = testResultXml.Root.Descendants(testResultNamespace + "UnitTest");
             foreach (var test in tests)
             {
-                var name = (String)test.Attribute("testName");
+                var name = (String)test.Attribute("name");
                 name = String.Format(Settings.Default.TestNameRewriteRule, name);
-                test.SetAttributeValue("testName", name);
+                test.SetAttributeValue("name", name);
             }
 
             testResultXml.Save(path);
