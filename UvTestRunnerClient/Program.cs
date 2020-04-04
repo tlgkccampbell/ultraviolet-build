@@ -23,6 +23,7 @@ namespace UvTestRunnerClient
             var buildWorkingDirectory = args[1];
             var testAssembly = args[2];
             var testFramework = args.Length > 3 ? args[3] : "nunit3";
+            var testSuffix = args.Length > 4 ? args[4] : String.Empty;
 
             var isNetCore = String.Equals(testFramework, "nunit3core", StringComparison.Ordinal);
 
@@ -38,9 +39,9 @@ namespace UvTestRunnerClient
 
             var succeeded = Task.Run(() =>
             {
-                var taskSpawnIntel = Task.Run(() => SpawnNewTestRun(Settings.Default.UvTestRunnerUrlIntel, agentWorkingDirectory, buildWorkingDirectory, testAssembly, testFramework));
-                var taskSpawnNvidia = Task.Run(() => SpawnNewTestRun(Settings.Default.UvTestRunnerUrlNvidia, agentWorkingDirectory, buildWorkingDirectory, testAssembly, testFramework));
-                var taskSpawnAmd = Task.Run(() => SpawnNewTestRun(Settings.Default.UvTestRunnerUrlAmd, agentWorkingDirectory, buildWorkingDirectory, testAssembly, testFramework));
+                var taskSpawnIntel = Task.Run(() => SpawnNewTestRun(Settings.Default.UvTestRunnerUrlIntel, agentWorkingDirectory, buildWorkingDirectory, testAssembly, testFramework, testSuffix));
+                var taskSpawnNvidia = Task.Run(() => SpawnNewTestRun(Settings.Default.UvTestRunnerUrlNvidia, agentWorkingDirectory, buildWorkingDirectory, testAssembly, testFramework, testSuffix));
+                var taskSpawnAmd = Task.Run(() => SpawnNewTestRun(Settings.Default.UvTestRunnerUrlAmd, agentWorkingDirectory, buildWorkingDirectory, testAssembly, testFramework, testSuffix));
 
                 Task.WaitAll(taskSpawnIntel, taskSpawnNvidia, taskSpawnAmd);
 
@@ -49,11 +50,11 @@ namespace UvTestRunnerClient
                 Console.WriteLine($"Spawned #{taskSpawnAmd.Result} for AMD.");
 
                 var taskIntel = Task.Run(() => WaitForTestRunToComplete(taskSpawnIntel.Result, "Intel", Settings.Default.UvTestRunnerUrlIntel,
-                    agentWorkingDirectory, buildWorkingDirectory, inputNameIntel, outputNameIntel));
+                    agentWorkingDirectory, buildWorkingDirectory, inputNameIntel, outputNameIntel, testSuffix));
                 var taskNvidia = Task.Run(() => WaitForTestRunToComplete(taskSpawnNvidia.Result, "Nvidia", Settings.Default.UvTestRunnerUrlNvidia,
-                    agentWorkingDirectory, buildWorkingDirectory, inputNameNvidia, outputNameNvidia));
+                    agentWorkingDirectory, buildWorkingDirectory, inputNameNvidia, outputNameNvidia, testSuffix));
                 var taskAmd = Task.Run(() => WaitForTestRunToComplete(taskSpawnAmd.Result, "Amd", Settings.Default.UvTestRunnerUrlAmd,
-                    agentWorkingDirectory, buildWorkingDirectory, inputNameAmd, outputNameAmd));
+                    agentWorkingDirectory, buildWorkingDirectory, inputNameAmd, outputNameAmd, testSuffix));
 
                 Task.WaitAll(taskIntel, taskNvidia, taskAmd);
 
@@ -85,9 +86,10 @@ namespace UvTestRunnerClient
         /// <param name="buildWorkingDirectory">The working directory for the current build.</param>
         /// <param name="inputName">The name of the input result file.</param>
         /// <param name="outputName">The name to give to the result file.</param>
+        /// <param name="suffix">An optional suffix to append to the test results.</param>
         /// <returns>The path to the output result file.</returns>
         private static async Task<String> WaitForTestRunToComplete(Int64? id, 
-            String vendor, String testRunnerUrl, String agentWorkingDirectory, String buildWorkingDirectory, String inputName, String outputName)
+            String vendor, String testRunnerUrl, String agentWorkingDirectory, String buildWorkingDirectory, String inputName, String outputName, String suffix)
         {
             if (id == null)
                 return null;
@@ -105,7 +107,7 @@ namespace UvTestRunnerClient
                 }
 
                 // Spit out the result file.
-                var resultData = await RetrieveTestResult(vendor, agentWorkingDirectory, buildWorkingDirectory, inputName, idValue);
+                var resultData = await RetrieveTestResult(vendor, agentWorkingDirectory, buildWorkingDirectory, inputName, idValue, suffix);
                 var resultPath = Path.Combine(buildWorkingDirectory, outputName);
                 File.WriteAllBytes(resultPath, resultData);
 
@@ -126,8 +128,9 @@ namespace UvTestRunnerClient
         /// <param name="buildWorkingDirectory">The working directory for the current build.</param>
         /// <param name="testAssembly">The name of the assembly which contains the tests.</param>
         /// <param name="testFramework">The name of the test framework with which to run the tests.</param>
+        /// <param name="testSuffix">An optional suffix to append to the test output.</param>
         /// <returns>The identifier of the test run within the server's database.</returns>
-        private static async Task<Int64?> SpawnNewTestRun(String testRunnerUrl, String agentWorkingDirectory, String buildWorkingDirectory, String testAssembly, String testFramework)
+        private static async Task<Int64?> SpawnNewTestRun(String testRunnerUrl, String agentWorkingDirectory, String buildWorkingDirectory, String testAssembly, String testFramework, String testSuffix)
         {
             if (String.IsNullOrEmpty(testRunnerUrl))
                 return null;
@@ -142,7 +145,7 @@ namespace UvTestRunnerClient
                     new Uri(AddTrailingSlashToPath(agentWorkingDirectory)).MakeRelativeUri(
                     new Uri(AddTrailingSlashToPath(buildWorkingDirectory)));
                 
-                var response = await client.PostAsync("Api/UvTest", new StringContent($"\"{testAssembly},{dirRelative},{testFramework}\"", Encoding.UTF8, "application/json"));
+                var response = await client.PostAsync("Api/UvTest", new StringContent($"\"{testAssembly},{dirRelative},{testFramework},{testSuffix}\"", Encoding.UTF8, "application/json"));
                 if (!response.IsSuccessStatusCode)
                 {
                     Console.WriteLine("Failed to POST to test server at {0}: {1} {2}.", testRunnerUrl, (Int32)response.StatusCode, response.ReasonPhrase);
@@ -189,8 +192,9 @@ namespace UvTestRunnerClient
         /// <param name="buildWorkingDirectory">The working directory for the current build.</param>
         /// <param name="inputName">The name of the input result file.</param>
         /// <param name="id">The identifier of the test run within the server's database.</param>
+        /// <param name="suffix">A suffix to append to the test results.</param>
         /// <returns>The contents of the test result file associated with the specified test run.</returns>
-        private static async Task<Byte[]> RetrieveTestResult(String vendor, String agentWorkingDirectory, String buildWorkingDirectory, String inputName, Int64 id)
+        private static async Task<Byte[]> RetrieveTestResult(String vendor, String agentWorkingDirectory, String buildWorkingDirectory, String inputName, Int64 id, String suffix)
         {
             Console.WriteLine("Retreiving test result for {0}...", vendor);
 
@@ -202,6 +206,10 @@ namespace UvTestRunnerClient
                 var dirRelative =
                     new Uri(AddTrailingSlashToPath(agentWorkingDirectory)).MakeRelativeUri(
                     new Uri(AddTrailingSlashToPath(buildWorkingDirectory)));
+
+                var inputNameExtension = Path.GetExtension(inputName);
+                var inputNameWithoutExtension = Path.GetFileNameWithoutExtension(inputName);
+                inputName = $"{inputNameWithoutExtension}{suffix}{inputNameExtension}";
 
                 var request = Path.Combine("TestResults", vendor, dirRelative.ToString(), id.ToString(), inputName).Replace('\\', '/');
                 var response = await client.GetAsync(request);
