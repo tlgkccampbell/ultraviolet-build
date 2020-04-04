@@ -82,142 +82,157 @@ namespace UvTestRunner.Services
         {
             if (testRun == null)
                 throw new ArgumentNullException("testRun");
-            
+
             var id = testRun.ID;
-            var workingDirectory = testRun.WorkingDirectory;
-            var testFramework = (testRun.TestFramework ?? Settings.Default.TestFramework ?? "mstest").ToLowerInvariant();
-            var testSuffix = testRun.Suffix ?? String.Empty;
 
-            // Start by spawning the test runner process and running the unit test suite.
-            var proc = default(Process);
-            var previousWorkingDirectory = Environment.CurrentDirectory;
-            try
+            var testAssemblies = testRun.TestAssembly.Split(';');
+            var testSuffixes = (testRun.Suffix ?? String.Empty).Split(';');
+            if (testSuffixes.Length != testAssemblies.Length)
             {
-                Environment.CurrentDirectory = Path.Combine(Settings.Default.TestRootDirectory, workingDirectory).Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
-                
-                UpdateTestRunStatus(id, TestRunStatus.Running);
-                switch (testFramework)
+                UpdateTestRunStatus(id, TestRunStatus.Failed);
+                ProgramUI.QueueMessage("ERROR: Assembly/suffix mismatch.");
+                return id;
+            }
+
+            UpdateTestRunStatus(id, TestRunStatus.Running);
+            for (int i = 0; i < testAssemblies.Length; i++)
+            {
+                var workingDirectory = testRun.WorkingDirectory;
+                var testAssembly = testAssemblies[i];
+                var testFramework = (testRun.TestFramework ?? Settings.Default.TestFramework ?? "mstest").ToLowerInvariant();
+                var testSuffix = testSuffixes[i];
+
+                // Start by spawning the test runner process and running the unit test suite.
+                var proc = default(Process);
+                var previousWorkingDirectory = Environment.CurrentDirectory;
+                try
                 {
-                    case "mstest":
-                    case "nunit3":
-                        RunTests_Legacy(testRun, out proc);
-                        break;
+                    Environment.CurrentDirectory = Path.Combine(Settings.Default.TestRootDirectory, workingDirectory).Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
 
-                    case "nunit3core":
-                        RunTests_NUnit3Core(testRun, testSuffix, out proc);
-                        break;
+                    switch (testFramework)
+                    {
+                        case "mstest":
+                        case "nunit3":
+                            RunTests_Legacy(testAssembly, out proc);
+                            break;
+
+                        case "nunit3core":
+                            RunTests_NUnit3Core(testAssembly, testSuffix, out proc);
+                            break;
+                    }
                 }
-            }
-            catch (IOException e)
-            {
-                UpdateTestRunStatus(id, TestRunStatus.Failed);
-                ProgramUI.QueueMessage("ERROR: Unable to spawn unit test process!");
-                ProgramUI.QueueMessage("ERROR: " + e.Message + Environment.NewLine);
-                return id;
-            }
-            finally
-            {
-                Environment.CurrentDirectory = previousWorkingDirectory;
-            }
-
-            // If the test runner exited with an error, log it to the database and bail out.
-            var testFrameworkFailed = (testFramework == "mstest" || testFramework == "nunit3core") ? 
-                (proc.ExitCode != 0 && proc.ExitCode != 1) : (proc.ExitCode < 0);
-
-            if (testFrameworkFailed)
-            {
-                UpdateTestRunStatus(id, TestRunStatus.Failed);
-                return id;
-            }
-            
-            // Determine the location of the test result file...
-            var testResultsRoot = Path.Combine(Settings.Default.TestRootDirectory, workingDirectory, Settings.Default.TestOutputDirectory);
-            var testResultPath = String.Empty;
-            var testResultImagesPath = String.Empty;
-
-            /* If the tests ran successfully, find the folder that contains the test results.
-             * TODO: The way we do this currently introduces a race condition if the test suite is being run simultaneously
-             * in multiple threads, which shouldn't realistically happen, but this case probably
-             * ought to be handled anyway for robustness. */
-            try
-            {
-                switch (testFramework)
+                catch (IOException e)
                 {
-                    case "mstest":
-                        if (!GetTestResults_MSTest(id, testResultsRoot, out testResultPath, out testResultImagesPath))
-                            return id;
-                        break;
-
-                    case "nunit3":
-                        if (!GetTestResults_NUnit3(id, testResultsRoot, out testResultPath, out testResultImagesPath))
-                            return id;
-                        break;
-
-                    case "nunit3core":
-                        if (!GetTestResults_NUnit3Core(id, testResultsRoot, testSuffix, out testResultPath, out testResultImagesPath))
-                            return id;
-                        break;
+                    UpdateTestRunStatus(id, TestRunStatus.Failed);
+                    ProgramUI.QueueMessage("ERROR: Unable to spawn unit test process!");
+                    ProgramUI.QueueMessage("ERROR: " + e.Message + Environment.NewLine);
+                    return id;
                 }
-            }
-            catch (DirectoryNotFoundException)
-            {
-                UpdateTestRunStatus(id, TestRunStatus.Failed);
-                ProgramUI.QueueMessage("ERROR: Unable to retrieve test artifacts. Directory not found.");
-                return id;
-            }
+                finally
+                {
+                    Environment.CurrentDirectory = previousWorkingDirectory;
+                }
 
-            // Optionally rewrite test names.
-            try
-            {
-                if (!String.IsNullOrEmpty(Settings.Default.TestNameRewriteRule))
+                // If the test runner exited with an error, log it to the database and bail out.
+                var testFrameworkFailed = (testFramework == "mstest" || testFramework == "nunit3core") ?
+                    (proc.ExitCode != 0 && proc.ExitCode != 1) : (proc.ExitCode < 0);
+
+                if (testFrameworkFailed)
+                {
+                    UpdateTestRunStatus(id, TestRunStatus.Failed);
+                    return id;
+                }
+
+                // Determine the location of the test result file...
+                var testResultsRoot = Path.Combine(Settings.Default.TestRootDirectory, workingDirectory, Settings.Default.TestOutputDirectory);
+                var testResultPath = String.Empty;
+                var testResultImagesPath = String.Empty;
+
+                /* If the tests ran successfully, find the folder that contains the test results.
+                 * TODO: The way we do this currently introduces a race condition if the test suite is being run simultaneously
+                 * in multiple threads, which shouldn't realistically happen, but this case probably
+                 * ought to be handled anyway for robustness. */
+                try
                 {
                     switch (testFramework)
                     {
                         case "mstest":
-                            RewriteTestNames_MSTest(testResultPath);
+                            if (!GetTestResults_MSTest(id, testResultsRoot, out testResultPath, out testResultImagesPath))
+                                return id;
                             break;
 
                         case "nunit3":
+                            if (!GetTestResults_NUnit3(id, testResultsRoot, out testResultPath, out testResultImagesPath))
+                                return id;
+                            break;
+
                         case "nunit3core":
-                            RewriteTestNames_NUnit3(testResultPath);
+                            if (!GetTestResults_NUnit3Core(id, testResultsRoot, testSuffix, out testResultPath, out testResultImagesPath))
+                                return id;
                             break;
                     }
                 }
-            }
-            catch (IOException e)
-            {
-                UpdateTestRunStatus(id, TestRunStatus.Failed);
-                ProgramUI.QueueMessage("ERROR: Failed to rewrite test names. " + e.Message);
-                return id;
-            }
-
-            // Create a directory to hold this test's artifacts.
-            try
-            {
-                var outputDirectory = Path.Combine(Settings.Default.TestResultDirectory, workingDirectory, id.ToString());
-                Directory.CreateDirectory(outputDirectory);
-
-                // Copy the result file and any outputted PNG files to the artifact directory.
-                var resultFileSrc = testResultPath;
-                var resultFileDst = Path.Combine(outputDirectory, Path.GetFileName(testResultPath));
-                CopyFile(resultFileSrc, resultFileDst);
-
-                var pngFiles = Directory.GetFiles(testResultImagesPath, "*.png");
-                foreach (var pngFile in pngFiles)
+                catch (DirectoryNotFoundException)
                 {
-                    var pngFileSrc = pngFile;
-                    var pngFileDst = Path.Combine(outputDirectory, Path.GetFileName(pngFileSrc));
-                    CopyFile(pngFileSrc, pngFileDst);
+                    UpdateTestRunStatus(id, TestRunStatus.Failed);
+                    ProgramUI.QueueMessage("ERROR: Unable to retrieve test artifacts. Directory not found.");
+                    return id;
                 }
 
-                var resultStatus = GetStatusFromTestResult(resultFileSrc);
-                UpdateTestRunStatus(id, resultStatus);
-            }
-            catch (DirectoryNotFoundException)
-            {
-                UpdateTestRunStatus(id, TestRunStatus.Failed);
-                ProgramUI.QueueMessage("ERROR: Unable to store test artifacts. Directory not found.");
-                return id;
+                // Optionally rewrite test names.
+                try
+                {
+                    if (!String.IsNullOrEmpty(Settings.Default.TestNameRewriteRule))
+                    {
+                        switch (testFramework)
+                        {
+                            case "mstest":
+                                RewriteTestNames_MSTest(testResultPath);
+                                break;
+
+                            case "nunit3":
+                            case "nunit3core":
+                                RewriteTestNames_NUnit3(testResultPath);
+                                break;
+                        }
+                    }
+                }
+                catch (IOException e)
+                {
+                    UpdateTestRunStatus(id, TestRunStatus.Failed);
+                    ProgramUI.QueueMessage("ERROR: Failed to rewrite test names. " + e.Message);
+                    return id;
+                }
+
+
+                // Create a directory to hold this test's artifacts.
+                try
+                {
+                    var outputDirectory = Path.Combine(Settings.Default.TestResultDirectory, workingDirectory, id.ToString());
+                    Directory.CreateDirectory(outputDirectory);
+
+                    // Move the result file and any outputted PNG files to the artifact directory.
+                    var resultFileSrc = testResultPath;
+                    var resultFileDst = Path.Combine(outputDirectory, Path.GetFileName(testResultPath));
+                    MoveFile(resultFileSrc, resultFileDst);
+
+                    var pngFiles = Directory.GetFiles(testResultImagesPath, "*.png");
+                    foreach (var pngFile in pngFiles)
+                    {
+                        var pngFileSrc = pngFile;
+                        var pngFileDst = Path.Combine(outputDirectory, Path.GetFileName(pngFileSrc));
+                        MoveFile(pngFileSrc, pngFileDst);
+                    }
+
+                    var resultStatus = GetStatusFromTestResult(resultFileSrc);
+                    UpdateTestRunStatus(id, resultStatus);
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    UpdateTestRunStatus(id, TestRunStatus.Failed);
+                    ProgramUI.QueueMessage("ERROR: Unable to store test artifacts. Directory not found.");
+                    return id;
+                }
             }
 
             return id;
@@ -278,12 +293,11 @@ namespace UvTestRunner.Services
         }
         
         /// <summary>
-        /// Copies a file and does not return until copying is complete.
+        /// Moves a file and does not return until moving is complete.
         /// </summary>
         /// <param name="src">The source file.</param>
         /// <param name="dst">The destination file.</param>
-        /// <returns>A <see cref="Task"/> which represents the copy operation.</returns>
-        private void CopyFile(String src, String dst)
+        private void MoveFile(String src, String dst)
         {
             using (var srcStream = File.Open(src, FileMode.Open))
             {
@@ -292,6 +306,7 @@ namespace UvTestRunner.Services
                     srcStream.CopyTo(dstStream);
                 }
             }
+            File.Delete(src);
         }
 
         /// <summary>
@@ -408,9 +423,9 @@ namespace UvTestRunner.Services
         /// <summary>
         /// Runs tests using a legacy framework.
         /// </summary>
-        private void RunTests_Legacy(TestRun testRun, out Process proc)
+        private void RunTests_Legacy(String testAssembly, out Process proc)
         {
-            var psi = new ProcessStartInfo(Settings.Default.TestHostExecutable, String.Format(Settings.Default.TestHostArgs, testRun.TestAssembly ?? "Ultraviolet.Tests.dll"))
+            var psi = new ProcessStartInfo(Settings.Default.TestHostExecutable, String.Format(Settings.Default.TestHostArgs, testAssembly ?? "Ultraviolet.Tests.dll"))
             {
                 WorkingDirectory = Environment.CurrentDirectory
             };
@@ -422,9 +437,9 @@ namespace UvTestRunner.Services
         /// <summary>
         /// Runs NUnit3 runs for a .NET Core project.
         /// </summary>
-        private void RunTests_NUnit3Core(TestRun testRun, String testSuffix, out Process proc)
+        private void RunTests_NUnit3Core(String testAssembly, String testSuffix, out Process proc)
         {
-            var psi = new ProcessStartInfo(Settings.Default.NetCoreHostExecutable, $"test {String.Format(Settings.Default.NetCoreHostArgs, testRun.TestAssembly ?? "Ultraviolet.Tests.dll", testSuffix)}")
+            var psi = new ProcessStartInfo(Settings.Default.NetCoreHostExecutable, $"test {String.Format(Settings.Default.NetCoreHostArgs, testAssembly ?? "Ultraviolet.Tests.dll", testSuffix)}")
             {
                 WorkingDirectory = Environment.CurrentDirectory
             };
