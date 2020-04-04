@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -86,10 +87,10 @@ namespace UvTestRunnerClient
         /// <param name="buildWorkingDirectory">The working directory for the current build.</param>
         /// <param name="inputName">The name of the input result file.</param>
         /// <param name="outputName">The name to give to the result file.</param>
-        /// <param name="suffix">An optional suffix to append to the test results.</param>
-        /// <returns>The path to the output result file.</returns>
-        private static async Task<String> WaitForTestRunToComplete(Int64? id, 
-            String vendor, String testRunnerUrl, String agentWorkingDirectory, String buildWorkingDirectory, String inputName, String outputName, String suffix)
+        /// <param name="suffixes">A semicolon-delimited list of optional suffixes to append to the test results.</param>
+        /// <returns>The list of paths to the output result files.</returns>
+        private static async Task<List<String>> WaitForTestRunToComplete(Int64? id, 
+            String vendor, String testRunnerUrl, String agentWorkingDirectory, String buildWorkingDirectory, String inputName, String outputName, String suffixes)
         {
             if (id == null)
                 return null;
@@ -106,12 +107,17 @@ namespace UvTestRunnerClient
                     status = await QueryTestRunStatus(testRunnerUrl, idValue);
                 }
 
-                // Spit out the result file.
-                var resultData = await RetrieveTestResult(vendor, agentWorkingDirectory, buildWorkingDirectory, inputName, idValue, suffix);
-                var resultPath = Path.Combine(buildWorkingDirectory, outputName);
-                File.WriteAllBytes(resultPath, resultData);
-
-                return resultPath;
+                // Spit out the result files.
+                var resultPaths = new List<String>();
+                var splitSuffixes = (suffixes ?? String.Empty).Split(';');
+                for (int i = 0; i < splitSuffixes.Length; i++)
+                {
+                    var resultSuffix = splitSuffixes[i];
+                    var resultData = await RetrieveTestResult(vendor, agentWorkingDirectory, buildWorkingDirectory, inputName, idValue, resultSuffix);
+                    var resultPath = Path.Combine(buildWorkingDirectory, outputName);
+                    File.WriteAllBytes(resultPath, resultData);
+                }
+                return resultPaths;
             }
             catch (Exception e)
             {
@@ -225,7 +231,7 @@ namespace UvTestRunnerClient
                 }
 
                 var data = await response.Content.ReadAsByteArrayAsync();
-                Console.WriteLine("Received {0} bytes from {1}", data.Length, vendor);
+                Console.WriteLine("Received {0} bytes from {1} ({2})", data.Length, vendor, inputName);
 
                 return data;
             }
