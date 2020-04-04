@@ -165,21 +165,30 @@ namespace UvTestRunner.Services
                 ProgramUI.QueueMessage("ERROR: Unable to retrieve test artifacts. Directory not found.");
                 return id;
             }
-            
-            // Optionally rewrite test names.
-            if (!String.IsNullOrEmpty(Settings.Default.TestNameRewriteRule))
-            {
-                switch (testFramework)
-                {
-                    case "mstest":
-                        RewriteTestNames_MSTest(testResultPath);
-                        break;
 
-                    case "nunit3":
-                    case "nunit3core":
-                        RewriteTestNames_NUnit3(testResultPath);
-                        break;
+            // Optionally rewrite test names.
+            try
+            {
+                if (!String.IsNullOrEmpty(Settings.Default.TestNameRewriteRule))
+                {
+                    switch (testFramework)
+                    {
+                        case "mstest":
+                            RewriteTestNames_MSTest(testResultPath);
+                            break;
+
+                        case "nunit3":
+                        case "nunit3core":
+                            RewriteTestNames_NUnit3(testResultPath);
+                            break;
+                    }
                 }
+            }
+            catch (IOException e)
+            {
+                UpdateTestRunStatus(id, TestRunStatus.Failed);
+                ProgramUI.QueueMessage("ERROR: Failed to rewrite test names. " + e.Message);
+                return id;
             }
 
             // Create a directory to hold this test's artifacts.
