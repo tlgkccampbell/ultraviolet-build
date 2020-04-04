@@ -120,10 +120,8 @@ namespace UvTestRunner.Services
             }
 
             // If the test runner exited with an error, log it to the database and bail out.
-            var testFrameworkFailed = 
-                (testFramework == "mstest") ? (proc.ExitCode != 0 && proc.ExitCode != 1) :
-                (testFramework == "nunit3core") ? (proc.ExitCode != 0) :
-                (proc.ExitCode < 0);
+            var testFrameworkFailed = (testFramework == "mstest" || testFramework == "nunit3core") ? 
+                (proc.ExitCode != 0 && proc.ExitCode != 1) : (proc.ExitCode < 0);
 
             if (testFrameworkFailed)
             {
