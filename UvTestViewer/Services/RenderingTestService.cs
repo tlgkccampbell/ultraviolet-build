@@ -293,9 +293,15 @@ namespace UvTestViewer.Services
                 var testResultXml = XDocument.Load(testResultFilename);
                 var testResultNamespace = testResultXml.Root.GetDefaultNamespace();
 
-                var unitTestSuites = testResultXml.Root.Descendants(testResultNamespace + "test-suite")
+                var unitTestSuitesFixtures = testResultXml.Root.Descendants(testResultNamespace + "test-suite")
+                    .Where(x => (String)x.Attribute("type") == "TestFixture");
+                var unitTestSuitesParameterized = testResultXml.Root.Descendants(testResultNamespace + "test-suite")
+                    .Where(x => (String)x.Attribute("type") == "ParameterizedTest" && x.Descendants(testResultNamespace + "category").Any(y => (String)y.Attribute("name") == "Rendering"));
+
+                var unitTestsFromFixtures = unitTestSuitesFixtures.Elements(testResultNamespace + "results").SelectMany(x => x.Elements(testResultNamespace + "test-case"))
                     .Where(x => x.Descendants(testResultNamespace + "category").Any(y => (String)y.Attribute("name") == "Rendering"));
-                var unitTests = unitTestSuites.Elements(testResultNamespace + "results").SelectMany(x => x.Elements(testResultNamespace + "test-case"));
+                var unitTestsFromParameterized = unitTestSuitesParameterized.Elements(testResultNamespace + "results").SelectMany(x => x.Elements(testResultNamespace + "test-case"));
+                var unitTests = Enumerable.Union(unitTestsFromFixtures, unitTestsFromParameterized);
 
                 var failedTestNames = new HashSet<String>
                     (from r in unitTests
