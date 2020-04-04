@@ -343,37 +343,43 @@ namespace UvTestViewer.Services
         {
             try
             {
-                var testResultFilename = dir.GetFiles("*.xml").SingleOrDefault()?.FullName;
-                var testResultXml = XDocument.Load(testResultFilename);
-                var testResultNamespace = testResultXml.Root.GetDefaultNamespace();
+                var testResultList = new List<CachedTestInfo>();
+                var testResultFilenames = dir.GetFiles("*.xml").Select(x => x.FullName).ToList();
+                foreach (var testResultFilename in testResultFilenames)
+                {
+                    var testResultXml = XDocument.Load(testResultFilename);
+                    var testResultNamespace = testResultXml.Root.GetDefaultNamespace();
 
-                var unitTests = testResultXml.Root.Descendants(testResultNamespace + "test-case")
-                    .Where(x => x.Descendants(testResultNamespace + "property").Any(y => (String)y.Attribute("name") == "Category" && (String)y.Attribute("value") == "Rendering"));
+                    var unitTests = testResultXml.Root.Descendants(testResultNamespace + "test-case")
+                        .Where(x => x.Descendants(testResultNamespace + "property").Any(y => (String)y.Attribute("name") == "Category" && (String)y.Attribute("value") == "Rendering"));
 
-                var failedTestNames = new HashSet<String>
-                    (from r in unitTests
-                     let testName = (String)r.Attribute("name")
-                     let testResult = (String)r.Attribute("result")
-                     where
-                         testResult == "Failed"
-                     select testName);
+                    var failedTestNames = new HashSet<String>
+                        (from r in unitTests
+                         let testName = (String)r.Attribute("name")
+                         let testResult = (String)r.Attribute("result")
+                         where
+                             testResult == "Failed"
+                         select testName);
 
-                var cachedTestInfos =
-                    (from node in unitTests
-                     let name = (String)node.Attribute("name")
-                     let status = failedTestNames.Contains(name) ? CachedTestInfoStatus.Failed : CachedTestInfoStatus.Succeeded
-                     select new CachedTestInfo
-                     {
-                         Name = GetNUnitTestName(name),
-                         Status = status,
-                     }).ToList();
+                    var cachedTestInfos =
+                        (from node in unitTests
+                         let name = (String)node.Attribute("name")
+                         let status = failedTestNames.Contains(name) ? CachedTestInfoStatus.Failed : CachedTestInfoStatus.Succeeded
+                         select new CachedTestInfo
+                         {
+                             Name = GetNUnitTestName(name),
+                             Status = status,
+                         }).ToList();
+
+                    testResultList.AddRange(cachedTestInfos);
+                }
 
                 using (var stream = File.OpenWrite(cacheFilename))
                 {
-                    serializer.Serialize(stream, cachedTestInfos);
+                    serializer.Serialize(stream, testResultList);
                 }
 
-                return cachedTestInfos;
+                return testResultList;
             }
             catch (IOException)
             {
