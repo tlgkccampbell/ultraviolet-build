@@ -24,6 +24,16 @@ namespace UvTestRunnerClient
             var testAssembly = args[2];
             var testFramework = args.Length > 3 ? args[3] : "nunit3";
 
+            var isNetCore = String.Equals(testFramework, "nunit3netcore", StringComparison.Ordinal);
+
+            var inputNameIntel = isNetCore ? Settings.Default.NetCoreInputNameIntel : Settings.Default.InputNameIntel;
+            var inputNameNvidia = isNetCore ? Settings.Default.NetCoreInputNameNvidia : Settings.Default.InputNameNvidia;
+            var inputNameAmd = isNetCore ? Settings.Default.NetCoreInputNameAmd : Settings.Default.InputNameAmd;
+
+            var outputNameIntel = isNetCore ? Settings.Default.NetCoreOutputNameIntel : Settings.Default.OutputNameIntel;
+            var outputNameNvidia = isNetCore ? Settings.Default.NetCoreOutputNameNvidia : Settings.Default.OutputNameNvidia;
+            var outputNameAmd = isNetCore ? Settings.Default.NetCoreOutputNameAmd : Settings.Default.OutputNameAmd;
+
             Console.WriteLine("Spawning test runs.");
 
             var succeeded = Task.Run(() =>
@@ -39,11 +49,11 @@ namespace UvTestRunnerClient
                 Console.WriteLine($"Spawned #{taskSpawnAmd.Result} for AMD.");
 
                 var taskIntel = Task.Run(() => WaitForTestRunToComplete(taskSpawnIntel.Result, "Intel", Settings.Default.UvTestRunnerUrlIntel,
-                    agentWorkingDirectory, buildWorkingDirectory, Settings.Default.InputNameIntel, Settings.Default.OutputNameIntel));
+                    agentWorkingDirectory, buildWorkingDirectory, inputNameIntel, outputNameIntel));
                 var taskNvidia = Task.Run(() => WaitForTestRunToComplete(taskSpawnNvidia.Result, "Nvidia", Settings.Default.UvTestRunnerUrlNvidia,
-                    agentWorkingDirectory, buildWorkingDirectory, Settings.Default.InputNameNvidia, Settings.Default.OutputNameNvidia));
+                    agentWorkingDirectory, buildWorkingDirectory, inputNameNvidia, outputNameNvidia));
                 var taskAmd = Task.Run(() => WaitForTestRunToComplete(taskSpawnAmd.Result, "Amd", Settings.Default.UvTestRunnerUrlAmd,
-                    agentWorkingDirectory, buildWorkingDirectory, Settings.Default.InputNameAmd, Settings.Default.OutputNameAmd));
+                    agentWorkingDirectory, buildWorkingDirectory, inputNameAmd, outputNameAmd));
 
                 Task.WaitAll(taskIntel, taskNvidia, taskAmd);
 

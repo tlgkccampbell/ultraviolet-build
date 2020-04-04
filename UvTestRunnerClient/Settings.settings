@@ -32,5 +32,23 @@
     <Setting Name="InputNameAmd" Type="System.String" Scope="Application">
       <Value Profile="(Default)">Result.trx</Value>
     </Setting>
+    <Setting Name="NetCoreInputNameIntel" Type="System.String" Scope="Application">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="NetCoreInputNameNvidia" Type="System.String" Scope="Application">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="NetCoreInputNameAmd" Type="System.String" Scope="Application">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="NetCoreOutputNameIntel" Type="System.String" Scope="Application">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="NetCoreOutputNameNvidia" Type="System.String" Scope="Application">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="NetCoreOutputNameAmd" Type="System.String" Scope="Application">
+      <Value Profile="(Default)" />
+    </Setting>
   </Settings>
 </SettingsFile>
