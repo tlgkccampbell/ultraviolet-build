@@ -210,11 +210,8 @@ namespace UvTestRunner.Services
                     var outputDirectory = Path.Combine(Settings.Default.TestResultDirectory, workingDirectory, id.ToString());
                     Directory.CreateDirectory(outputDirectory);
 
-                    // Update test status
-                    var resultStatus = GetStatusFromTestResult(testResultPath);
-                    UpdateTestRunStatus(id, resultStatus);
-
                     // Move the result file and any outputted PNG files to the artifact directory.
+                    var resultStatus = GetStatusFromTestResult(testResultPath);
                     var resultFileSrc = testResultPath;
                     var resultFileDst = Path.Combine(outputDirectory, Path.GetFileName(testResultPath));
                     MoveFile(resultFileSrc, resultFileDst);
@@ -226,6 +223,13 @@ namespace UvTestRunner.Services
                         var pngFileDst = Path.Combine(outputDirectory, Path.GetFileName(pngFileSrc));
                         MoveFile(pngFileSrc, pngFileDst);
                     }
+
+                    // Update test status if the test failed.
+                    if (resultStatus != TestRunStatus.Succeeded)
+                    {
+                        UpdateTestRunStatus(id, resultStatus);
+                        return id;
+                    }
                 }
                 catch (DirectoryNotFoundException)
                 {
@@ -235,6 +239,7 @@ namespace UvTestRunner.Services
                 }
             }
 
+            UpdateTestRunStatus(id, TestRunStatus.Succeeded);
             return id;
         }
 
