@@ -293,8 +293,9 @@ namespace UvTestViewer.Services
                 var testResultXml = XDocument.Load(testResultFilename);
                 var testResultNamespace = testResultXml.Root.GetDefaultNamespace();
 
-                var unitTests = testResultXml.Root.Descendants(testResultNamespace + "test-case")
+                var unitTestSuites = testResultXml.Root.Descendants(testResultNamespace + "test-suite")
                     .Where(x => x.Descendants(testResultNamespace + "category").Any(y => (String)y.Attribute("name") == "Rendering"));
+                var unitTests = unitTestSuites.Elements(testResultNamespace + "results").SelectMany(x => x.Elements(testResultNamespace + "test-case"));
 
                 var failedTestNames = new HashSet<String>
                     (from r in unitTests
