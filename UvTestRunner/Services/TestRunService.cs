@@ -219,12 +219,13 @@ namespace UvTestRunner.Services
         /// <param name="workingDirectory">The current working directory for the build agent.</param>
         /// <param name="testAssembly">The name of the assembly that contains the tests.</param>
         /// <param name="testFramework">The name of the test framework with which to execute the tests.</param>
+        /// <param name="suffix">An optional suffix to use when outputting test results.</param>
         /// <returns>The identifier of the test run within the database.</returns>
-        public Int64 CreateTestRun(String workingDirectory, String testAssembly, String testFramework)
+        public Int64 CreateTestRun(String workingDirectory, String testAssembly, String testFramework, String suffix)
         {
             using (var testRunContext = new TestRunContext())
             {
-                var run = new TestRun() { Status = TestRunStatus.Pending, WorkingDirectory = workingDirectory, TestAssembly = testAssembly, TestFramework = testFramework };
+                var run = new TestRun() { Status = TestRunStatus.Pending, WorkingDirectory = workingDirectory, TestAssembly = testAssembly, TestFramework = testFramework, Suffix = suffix };
 
                 testRunContext.TestRuns.Add(run);
                 testRunContext.SaveChanges();

@@ -11,5 +11,6 @@ namespace UvTestRunner.Models
         public String WorkingDirectory { get; set; }
         public String TestAssembly { get; set; }
         public String TestFramework { get; set; }
+        public String Suffix { get; set; }
     }
 }
