@@ -132,32 +132,40 @@ namespace UvTestViewer.Services
                 default: 
                     throw new ArgumentException("Unrecognized GPU hardware vendor.");
             }
-            var workingDirectoryPattern = ConfigurationManager.AppSettings["BambooWorkingDirectoryPattern"];
-            var workingDirectory = String.Format(workingDirectoryPattern, branchKey ?? planKey);
-            rootMapped = Path.Combine(rootMapped, workingDirectory);
 
-            if (!Directory.Exists(rootMapped))
+            var workingDirectoryPatterns = ConfigurationManager.AppSettings["BambooWorkingDirectoryPattern"].Split(';');
+            foreach (var workingDirectoryPattern in workingDirectoryPatterns)
             {
-                id = 0;
-                return null;
+                var workingDirectory = String.Format(workingDirectoryPattern, branchKey ?? planKey);
+                var workingDirectoryWithRoot = Path.Combine(rootMapped, workingDirectory);
+
+                if (!Directory.Exists(workingDirectoryWithRoot))
+                {
+                    id = 0;
+                    continue;
+                }
+
+                var rootSubdirs = Directory.GetDirectories(workingDirectoryWithRoot);
+                var rootSubdirsByID = from subdir in rootSubdirs
+                                      let dirInfo = new DirectoryInfo(subdir)
+                                      let dirID = GetDirectoryID(dirInfo.Name)
+                                      where dirID.HasValue
+                                      orderby dirInfo.CreationTime descending
+                                      select new { ID = dirID, DirectoryInfo = dirInfo };
+
+                var directory = rootSubdirsByID.FirstOrDefault();
+                if (directory == null)
+                {
+                    id = 0;
+                    continue;
+                }
+
+                id = directory.ID.Value;
+                return directory.DirectoryInfo;
             }
 
-            var rootSubdirs     = Directory.GetDirectories(rootMapped);
-            var rootSubdirsByID = from subdir in rootSubdirs
-                                  let dirInfo = new DirectoryInfo(subdir)
-                                  let dirID = GetDirectoryID(dirInfo.Name)
-                                  where dirID.HasValue
-                                  orderby dirInfo.CreationTime descending
-                                  select new { ID = dirID, DirectoryInfo = dirInfo };
-
-            var directory = rootSubdirsByID.FirstOrDefault();
-            if (directory == null)
-            {
-                id = 0;
-                return null;
-            }
-            id = directory.ID.Value;
-            return directory.DirectoryInfo;
+            id = 0;
+            return null;
         }
 
         /// <summary>
