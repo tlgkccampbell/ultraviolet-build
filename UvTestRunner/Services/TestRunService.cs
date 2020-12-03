@@ -305,13 +305,8 @@ namespace UvTestRunner.Services
         /// <param name="delete">A value indicating whether to delete the source file after copying.</param>
         private void CopyFile(String src, String dst, Boolean delete)
         {
-            using (var srcStream = File.Open(src, FileMode.Open))
-            {
-                using (var dstStream = File.Create(dst))
-                {
-                    srcStream.CopyTo(dstStream);
-                }
-            }
+            var data = File.ReadAllBytes(src);
+            File.WriteAllBytes(dst, data);
 
             if (delete)
                 File.Delete(src);
