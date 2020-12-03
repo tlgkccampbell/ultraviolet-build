@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -305,8 +306,23 @@ namespace UvTestRunner.Services
         /// <param name="delete">A value indicating whether to delete the source file after copying.</param>
         private void CopyFile(String src, String dst, Boolean delete)
         {
-            var data = File.ReadAllBytes(src);
-            File.WriteAllBytes(dst, data);
+            const Int32 MaxRetryCount = 3;
+            for (var attempt = 0; attempt < MaxRetryCount; attempt++)
+            {
+                try
+                {
+                    var data = File.ReadAllBytes(src);
+                    File.WriteAllBytes(dst, data);
+                    break;
+                }
+                catch (NotSupportedException)
+                {
+                    if (attempt + 1 == MaxRetryCount)
+                        throw;
+
+                    Thread.Sleep(TimeSpan.FromSeconds(5));
+                }
+            }
 
             if (delete)
                 File.Delete(src);
